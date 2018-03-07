@@ -3,32 +3,32 @@
   "metadata": {
     "test": {
       "height": 128,
-      "width": 64
+      "width": 128
     }
   },
-  "zoom": 11.7,
+  "zoom": 2,
+  "sprite": "local://sprites/emerald",
   "sources": {
     "a": {
       "type": "geojson",
-      "maxzoom": 10,
       "data": {
         "type": "FeatureCollection",
         "features": [
           {
             "type": "Feature",
             "properties": {
-              "class": "street"
+              "class": "trunk"
             },
             "geometry": {
               "type": "LineString",
               "coordinates": [
                 [
                   10,
-                  -0.01
+                  -10
                 ],
                 [
                   -10,
-                  -0.01
+                  -10
                 ]
               ]
             }
@@ -62,11 +62,11 @@
               "coordinates": [
                 [
                   -10,
-                  0.01
+                  10
                 ],
                 [
                   10,
-                  0.01
+                  10
                 ]
               ]
             }
@@ -75,7 +75,6 @@
       }
     }
   },
-  "sprite": "local://sprites/emerald",
   "layers": [
     {
       "id": "background",
@@ -89,8 +88,17 @@
       "type": "line",
       "source": "a",
       "paint": {
-        "line-width": 20,
-        "line-pattern": "generic_icon"
+        "line-width": 10,
+        "line-pattern": [
+          "step", ["zoom"],
+          "generic_icon",
+          2,
+          ["match", ["string", ["get", "class"]],
+            "street", "generic_icon",
+            "path", "generic_metro",
+            "school_icon"
+          ]
+        ]
       }
     }
   ]
