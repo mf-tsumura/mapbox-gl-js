@@ -6,6 +6,7 @@ import { performSymbolLayout } from '../symbol/symbol_layout';
 import { CollisionBoxArray } from '../data/array_types';
 import DictionaryCoder from '../util/dictionary_coder';
 import SymbolBucket from '../data/bucket/symbol_bucket';
+import LineBucket from '../data/bucket/line_bucket';
 import { warnOnce, mapObject, values } from '../util/util';
 import assert from 'assert';
 import ImageAtlas from '../render/image_atlas';
@@ -161,6 +162,9 @@ class WorkerTile {
                     if (bucket instanceof SymbolBucket) {
                         recalculateLayers(bucket.layers, this.zoom);
                         performSymbolLayout(bucket, glyphMap, glyphAtlas.positions, imageMap, imageAtlas.positions, this.showCollisionBoxes);
+                    } else if (bucket instanceof LineBucket && bucket.dataDrivenPattern) {
+                        recalculateLayers(bucket.layers, this.zoom);
+                        bucket.addPatternFeatures(options, imageMap, imageAtlas.positions);
                     }
                 }
 

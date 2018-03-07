@@ -110,7 +110,7 @@ class ConstantBinder<T> implements Binder<T> {
         const value: any = currentValue.constantOr(this.value);
         const gl = context.gl;
         for (let i = 0; i < this.names.length; i++) {
-            const name = this.names[i]
+            const name = this.names[i];
             if (this.type === 'color') {
                 gl.uniform4f(program.uniforms[`u_${name}`], value.r, value.g, value.b, value.a);
             } else {
@@ -130,18 +130,18 @@ class SourceExpressionBinder<T> implements Binder<T> {
     paintVertexAttributes: Array<StructArrayMember>;
     paintVertexBuffer: ?VertexBuffer;
 
-    constructor(expression: SourceExpression, names: Array<string>, type: string, layout: () => StructArray) {
+    constructor(expression: SourceExpression, names: Array<string>, type: string, layout: Class<StructArray>) {
         this.expression = expression;
         this.names = names;
         this.type = type;
         this.statistics = { max: -Infinity };
         const PaintVertexArray = layout;
-        this.paintVertexAttributes = names.map( name =>
+        this.paintVertexAttributes = names.map((name, i) =>
             ({
                 name: `a_${name}`,
                 type: 'Float32',
-                components: type === 'color' ? 2 : 1,
-                offset: 0
+                components: type === 'color'  || name.match(/pattern/) ? 2 : 1,
+                offset: name.match(/pattern/) ? i * 8 : 0
             })
         );
         this.paintVertexArray = new PaintVertexArray();
@@ -220,7 +220,7 @@ class CompositeExpressionBinder<T> implements Binder<T> {
     paintVertexAttributes: Array<StructArrayMember>;
     paintVertexBuffer: ?VertexBuffer;
 
-    constructor(expression: CompositeExpression, names: Array<string>, type: string, useIntegerZoom: boolean, zoom: number, layout: () => StructArray) {
+    constructor(expression: CompositeExpression, names: Array<string>, type: string, useIntegerZoom: boolean, zoom: number, layout: Class<StructArray>) {
         this.expression = expression;
         this.names = names;
         this.type = type;
@@ -386,6 +386,9 @@ export default class ProgramConfiguration {
 
     populatePaintArrays(newLength: number, feature: Feature, index: number) {
         for (const property in this.binders) {
+            // binders for properties with layout exceptions populate their paint arrays in the
+            // bucket because they have multiple attributes and property-specific population code
+            if (getLayoutException(property)) continue;
             this.binders[property].populatePaintArray(newLength, feature);
         }
         if (feature.id) {
@@ -524,25 +527,35 @@ export class ProgramConfigurationSet<Layer: TypedStyleLayer> {
 // paint property arrays
 function paintAttributeName(property, type) {
     const attributeNameExceptions = {
-        'text-opacity': 'opacity',
-        'icon-opacity': 'opacity',
-        'text-color': 'fill_color',
-        'icon-color': 'fill_color',
-        'text-halo-color': 'halo_color',
-        'icon-halo-color': 'halo_color',
-        'text-halo-blur': 'halo_blur',
-        'icon-halo-blur': 'halo_blur',
-        'text-halo-width': 'halo_width',
-        'icon-halo-width': 'halo_width',
-        'line-gap-width': 'gapwidth',
+        'text-opacity': ['opacity'],
+        'icon-opacity': ['opacity'],
+        'text-color': ['fill_color'],
+        'icon-color': ['fill_color'],
+        'text-halo-color': ['halo_color'],
+        'icon-halo-color': ['halo_color'],
+        'text-halo-blur': ['halo_blur'],
+        'icon-halo-blur': ['halo_blur'],
+        'text-halo-width': ['halo_width'],
+        'icon-halo-width': ['halo_width'],
+        'line-gap-width': ['gapwidth'],
         'line-pattern': ['pattern_a', 'pattern_b', 'pattern_size']
     };
-    return [attributeNameExceptions[property] ||
-        property.replace(`${type}-`, '').replace(/-/g, '_')];
+    return attributeNameExceptions[property] ||
+        [property.replace(`${type}-`, '').replace(/-/g, '_')];
+}
+
+function getLayoutException(property) {
+    const propertyExceptions = {
+        'line-pattern':{
+            'source': LinePatternSourceExpressionLayoutArray,
+            'composite': LinePatternCompositeExpressionLayoutArray
+        }
+    };
+
+    return propertyExceptions[property];
 }
 
 function layoutType(property, type, binderType) {
-    const propertyExceptions = {};
     const defaultLayouts = {
         'color': {
             'source': StructArrayLayout2f8,
@@ -554,7 +567,8 @@ function layoutType(property, type, binderType) {
         }
     };
 
-    return propertyExceptions[property] && propertyExceptions[property][binderType] ||
+    const layoutException = getLayoutException(property);
+    return  layoutException && layoutException[binderType] ||
         defaultLayouts[type][binderType];
 }
 

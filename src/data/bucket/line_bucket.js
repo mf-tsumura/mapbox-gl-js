@@ -25,7 +25,20 @@ import type {Segment} from '../segment';
 import type Context from '../../gl/context';
 import type IndexBuffer from '../../gl/index_buffer';
 import type VertexBuffer from '../../gl/vertex_buffer';
+import type {CrossFaded} from '../../style/cross_faded';
 import type {FeatureStates} from '../../source/source_state';
+import type {StyleImage} from '../../style/style_image';
+import type {ImagePosition} from '../../render/image_atlas';
+
+export type LineFeature = {|
+    image: ?CrossFaded<string>,
+    index: number,
+    sourceLayerIndex: number,
+    geometry: Array<Array<Point>>,
+    properties: Object,
+    type: 1 | 2 | 3,
+    id?: any
+|};
 
 // NOTE ON EXTRUDE SCALE:
 // scale the extrusion vector so that the normal length is this value.
@@ -96,12 +109,17 @@ class LineBucket implements Bucket {
     layers: Array<LineStyleLayer>;
     layerIds: Array<string>;
     stateDependentLayers: Array<any>;
+    features: Array<LineFeature>;
+    dataDrivenPattern: boolean;
 
     layoutVertexArray: LineLayoutArray;
     layoutVertexBuffer: VertexBuffer;
 
     indexArray: TriangleIndexArray;
     indexBuffer: IndexBuffer;
+
+    imageMap: {[string]: StyleImage};
+    imagePositions: {[string]: ImagePosition};
 
     programConfigurations: ProgramConfigurationSet<LineStyleLayer>;
     segments: SegmentVector;
@@ -113,16 +131,57 @@ class LineBucket implements Bucket {
         this.layers = options.layers;
         this.layerIds = this.layers.map(layer => layer.id);
         this.index = options.index;
+        this.features = [];
 
         this.layoutVertexArray = new LineLayoutArray();
         this.indexArray = new TriangleIndexArray();
         this.programConfigurations = new ProgramConfigurationSet(layoutAttributes, options.layers, options.zoom);
         this.segments = new SegmentVector();
+
+        this.dataDrivenPattern = false;
+
+        for (const key in this.programConfigurations) {
+            const programConfiguration = this.programConfigurations[key];
+            for (const layer in programConfiguration) {
+                const binders = programConfiguration[layer].binders;
+                if (binders && binders['line-pattern'] && binders['line-pattern'].paintVertexArray) {
+                    this.dataDrivenPattern = true;
+                    break;
+                }
+            }
+        }
     }
 
     populate(features: Array<IndexedFeature>, options: PopulateParameters) {
+        const icons = options.iconDependencies;
+        this.features = [];
         for (const {feature, index, sourceLayerIndex} of features) {
-            if (this.layers[0]._featureFilter(new EvaluationParameters(this.zoom), feature)) {
+            if (!this.layers[0]._featureFilter(new EvaluationParameters(this.zoom), feature)) continue;
+            if (this.dataDrivenPattern) {
+                const layer = this.layers[0];
+                const linePattern = layer.paint.get('line-pattern');
+                const image = linePattern.evaluate(feature);
+                if (image) {
+                    icons[image.from] = true;
+                    icons[image.to] = true;
+                }
+                const geometry = loadGeometry(feature);
+                const lineFeature: LineFeature = {
+                    image: image,
+                    sourceLayerIndex: sourceLayerIndex,
+                    index: index,
+                    geometry: geometry,
+                    properties: feature.properties,
+                    type: feature.type
+                };
+
+                if (typeof feature.id !== 'undefined') {
+                    lineFeature.id = feature.id;
+                }
+
+                this.features.push(lineFeature);
+                options.featureIndex.insert(feature, geometry, index, sourceLayerIndex, this.index);
+            } else {
                 const geometry = loadGeometry(feature);
                 this.addFeature(feature, geometry, index);
                 options.featureIndex.insert(feature, geometry, index, sourceLayerIndex, this.index);
@@ -133,6 +192,16 @@ class LineBucket implements Bucket {
     update(states: FeatureStates, vtLayer: VectorTileLayer) {
         if (!this.stateDependentLayers.length) return;
         this.programConfigurations.updatePaintArrays(states, vtLayer, this.stateDependentLayers);
+    }
+
+    // used if line-pattern is data-driven
+    addPatternFeatures(options: PopulateParameters, imageMap: {[string]: StyleImage}, imagePositions: {[string]: ImagePosition}) {
+        this.imageMap = imageMap;
+        this.imagePositions = imagePositions;
+        for (const feature of this.features) {
+            const {geometry} = feature;
+            this.addFeature(feature, geometry);
+        }
     }
 
     isEmpty() {
@@ -160,7 +229,7 @@ class LineBucket implements Bucket {
         this.segments.destroy();
     }
 
-    addFeature(feature: VectorTileFeature, geometry: Array<Array<Point>>, index: number) {
+    addFeature(feature: VectorTileFeature | LineFeature, geometry: Array<Array<Point>>, index: number) {
         const layout = this.layers[0].layout;
         const join = layout.get('line-join').evaluate(feature);
         const cap = layout.get('line-cap');
@@ -172,7 +241,7 @@ class LineBucket implements Bucket {
         }
     }
 
-    addLine(vertices: Array<Point>, feature: VectorTileFeature, join: string, cap: string, miterLimit: number, roundLimit: number, index: number) {
+    addLine(vertices: Array<Point>, feature: VectorTileFeature | LineFeature, join: string, cap: string, miterLimit: number, roundLimit: number, index: number) {
         let lineDistances = null;
         if (!!feature.properties &&
             feature.properties.hasOwnProperty('mapbox_clip_start') &&
@@ -451,8 +520,41 @@ class LineBucket implements Bucket {
         }
 
         this.programConfigurations.populatePaintArrays(this.layoutVertexArray.length, feature, index);
+        if (this.dataDrivenPattern) this.populatePatternPaintArray(this.layoutVertexArray.length, feature);
     }
 
+    populatePatternPaintArray(length: number, feature: VectorTileFeature | LineFeature) {
+        for (const layer of this.layers) {
+            const programConfiguration = this.programConfigurations.get(layer.id);
+            if (programConfiguration.binders && programConfiguration.binders['line-pattern'] && (programConfiguration.binders['line-pattern'] instanceof SourceExpressionBinder || programConfiguration.binders['line-pattern'] instanceof CompositeExpressionBinder)) {
+                const paintArray = programConfiguration.binders['line-pattern'].paintVertexArray;
+                const start = paintArray.length;
+
+                paintArray.reserve(length);
+                if (feature.image) {
+                    const image = (feature.image: any);
+                    const imagePosA = this.imagePositions[image.from];
+                    const imagePosB = this.imagePositions[image.to];
+
+                    if (!imagePosA || !imagePosB) return;
+
+                    const aTL = packUint8ToFloat(imagePosA.tl[0], imagePosA.tl[1]);
+                    const aBR = packUint8ToFloat(imagePosA.br[0], imagePosA.br[1]);
+                    const bTL = packUint8ToFloat(imagePosB.tl[0], imagePosB.tl[1]);
+                    const bBR = packUint8ToFloat(imagePosB.br[0], imagePosB.br[1]);
+
+                    for (let i = start; i < length; i++) {
+                        paintArray.emplaceBack(
+                            // u_pattern_tl_a, u_pattern_br_a
+                            aTL, aBR,
+                            // u_pattern_tl_b, u_pattern_br_b
+                            bTL, bBR
+                        );
+                    }
+                }
+            }
+        }
+    }
     /**
      * Add two vertices to the buffers.
      *
@@ -587,6 +689,6 @@ function calculateFullDistance(vertices: Array<Point>, first: number, len: numbe
     return total;
 }
 
-register('LineBucket', LineBucket, {omit: ['layers']});
+register('LineBucket', LineBucket, {omit: ['layers', 'features']});
 
 export default LineBucket;
