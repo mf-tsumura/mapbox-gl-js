@@ -162,7 +162,7 @@ class WorkerTile {
                     if (bucket instanceof SymbolBucket) {
                         recalculateLayers(bucket.layers, this.zoom);
                         performSymbolLayout(bucket, glyphMap, glyphAtlas.positions, imageMap, imageAtlas.positions, this.showCollisionBoxes);
-                    } else if (bucket instanceof LineBucket && bucket.dataDrivenPattern) {
+                    } else if (bucket instanceof LineBucket && bucket.dataDrivenPatternLayers.length) {
                         recalculateLayers(bucket.layers, this.zoom);
                         bucket.addPatternFeatures(options, imageMap, imageAtlas.positions);
                     }

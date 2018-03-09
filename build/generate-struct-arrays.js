@@ -125,20 +125,22 @@ createStructArrayType('raster_bounds', rasterBoundsAttributes);
 
 const circleAttributes = require('../src/data/bucket/circle_attributes').default;
 const fillAttributes = require('../src/data/bucket/fill_attributes').default;
-const fillExtrusionAttributes = require('../src/data/bucket/fill_extrusion_attributes').default ;
-const lineAttributes = require('../src/data/bucket/line_attributes').default;
+const fillExtrusionAttributes = require('../src/data/bucket/fill_extrusion_attributes').default;
+const lineAttributes = require('../src/data/bucket/line_attributes');
 
 // layout vertex arrays
 const layoutAttributes = {
     circle: circleAttributes,
     fill: fillAttributes,
     'fill-extrusion': fillExtrusionAttributes,
-    heatmap: circleAttributes,
-    line: lineAttributes
+    heatmap: circleAttributes
 };
 for (const name in layoutAttributes) {
     createStructArrayType(`${name.replace(/-/g, '_')}_layout`, layoutAttributes[name]);
 }
+
+createStructArrayType(`line_layout`, lineAttributes.lineLayoutAttributes);
+createStructArrayType(`line_pattern_layout`, lineAttributes.linePatternAttributes);
 
 // symbol layer specific arrays
 const {

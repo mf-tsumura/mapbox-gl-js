@@ -25,13 +25,10 @@ import type {Segment} from '../segment';
 import type Context from '../../gl/context';
 import type IndexBuffer from '../../gl/index_buffer';
 import type VertexBuffer from '../../gl/vertex_buffer';
-import type {CrossFaded} from '../../style/cross_faded';
 import type {FeatureStates} from '../../source/source_state';
-import type {StyleImage} from '../../style/style_image';
 import type {ImagePosition} from '../../render/image_atlas';
 
 export type LineFeature = {|
-    image: ?CrossFaded<string>,
     index: number,
     sourceLayerIndex: number,
     geometry: Array<Array<Point>>,
@@ -110,7 +107,6 @@ class LineBucket implements Bucket {
     layerIds: Array<string>;
     stateDependentLayers: Array<any>;
     features: Array<LineFeature>;
-    dataDrivenPattern: boolean;
 
     layoutVertexArray: LineLayoutArray;
     layoutVertexBuffer: VertexBuffer;
@@ -118,7 +114,6 @@ class LineBucket implements Bucket {
     indexArray: TriangleIndexArray;
     indexBuffer: IndexBuffer;
 
-    imageMap: {[string]: StyleImage};
     imagePositions: {[string]: ImagePosition};
 
     programConfigurations: ProgramConfigurationSet<LineStyleLayer>;
@@ -137,37 +132,44 @@ class LineBucket implements Bucket {
         this.indexArray = new TriangleIndexArray();
         this.programConfigurations = new ProgramConfigurationSet(layoutAttributes, options.layers, options.zoom);
         this.segments = new SegmentVector();
-
-        this.dataDrivenPattern = false;
-
-        for (const key in this.programConfigurations) {
-            const programConfiguration = this.programConfigurations[key];
-            for (const layer in programConfiguration) {
-                const binders = programConfiguration[layer].binders;
-                if (binders && binders['line-pattern'] && binders['line-pattern'].paintVertexArray) {
-                    this.dataDrivenPattern = true;
-                    break;
-                }
-            }
-        }
     }
 
     populate(features: Array<IndexedFeature>, options: PopulateParameters) {
         const icons = options.iconDependencies;
         this.features = [];
+
+        const dataDrivenPatternLayers = [];
+        for (let i = 0; i < this.layers.length; i++) {
+            const layer = this.layers[i];
+            const linePattern = layer.paint.get('line-pattern');
+            if (linePattern.value.kind === "source" || linePattern.value.kind === "composite") {
+                dataDrivenPatternLayers.push(layer);
+            } else {
+                // add all icons needed for this tile to the tile's IconAtlas dependencies
+                // for non-data-driven line-pattern properties
+                const image = linePattern.constantOr(null);
+                if (image) {
+                    icons[image.min] = true;
+                    icons[image.mid] = true;
+                    icons[image.max] = true;
+                }
+            }
+        }
+
         for (const {feature, index, sourceLayerIndex} of features) {
-            if (!this.layers[0]._featureFilter(new EvaluationParameters(this.zoom), feature)) continue;
-            if (this.dataDrivenPattern) {
-                const layer = this.layers[0];
+            if (!this.layers[0]._featureFilter({zoom: this.zoom}, feature)) continue;
+            for (let i = 0; i < dataDrivenPatternLayers.length; i++) {
+                const layer = dataDrivenPatternLayers[i];
                 const linePattern = layer.paint.get('line-pattern');
                 const image = linePattern.evaluate(feature);
                 if (image) {
-                    icons[image.from] = true;
-                    icons[image.to] = true;
+                    icons[image.min] = true;
+                    icons[image.mid] = true;
+                    icons[image.max] = true;
                 }
+
                 const geometry = loadGeometry(feature);
                 const lineFeature: LineFeature = {
-                    image: image,
                     sourceLayerIndex: sourceLayerIndex,
                     index: index,
                     geometry: geometry,
@@ -175,17 +177,12 @@ class LineBucket implements Bucket {
                     type: feature.type
                 };
 
-                if (typeof feature.id !== 'undefined') {
-                    lineFeature.id = feature.id;
-                }
-
-                this.features.push(lineFeature);
-                options.featureIndex.insert(feature, geometry, index, sourceLayerIndex, this.index);
-            } else {
-                const geometry = loadGeometry(feature);
-                this.addFeature(feature, geometry, index);
-                options.featureIndex.insert(feature, geometry, index, sourceLayerIndex, this.index);
+            if (typeof feature.id !== 'undefined') {
+                lineFeature.id = feature.id;
             }
+
+            this.features.push(lineFeature);
+            options.featureIndex.insert(feature, geometry, index, sourceLayerIndex, this.index);
         }
     }
 
@@ -194,9 +191,7 @@ class LineBucket implements Bucket {
         this.programConfigurations.updatePaintArrays(states, vtLayer, this.stateDependentLayers);
     }
 
-    // used if line-pattern is data-driven
-    addPatternFeatures(options: PopulateParameters, imageMap: {[string]: StyleImage}, imagePositions: {[string]: ImagePosition}) {
-        this.imageMap = imageMap;
+    addFeatures(options: PopulateParameters, imagePositions: {[string]: ImagePosition}) {
         this.imagePositions = imagePositions;
         for (const feature of this.features) {
             const {geometry} = feature;
@@ -519,42 +514,9 @@ class LineBucket implements Bucket {
             startOfLine = false;
         }
 
-        this.programConfigurations.populatePaintArrays(this.layoutVertexArray.length, feature, index);
-        if (this.dataDrivenPattern) this.populatePatternPaintArray(this.layoutVertexArray.length, feature);
+        this.programConfigurations.populatePaintArrays(this.layoutVertexArray.length, feature, index, this.imagePositions);
     }
 
-    populatePatternPaintArray(length: number, feature: VectorTileFeature | LineFeature) {
-        for (const layer of this.layers) {
-            const programConfiguration = this.programConfigurations.get(layer.id);
-            if (programConfiguration.binders && programConfiguration.binders['line-pattern'] && (programConfiguration.binders['line-pattern'] instanceof SourceExpressionBinder || programConfiguration.binders['line-pattern'] instanceof CompositeExpressionBinder)) {
-                const paintArray = programConfiguration.binders['line-pattern'].paintVertexArray;
-                const start = paintArray.length;
-
-                paintArray.reserve(length);
-                if (feature.image) {
-                    const image = (feature.image: any);
-                    const imagePosA = this.imagePositions[image.from];
-                    const imagePosB = this.imagePositions[image.to];
-
-                    if (!imagePosA || !imagePosB) return;
-
-                    const aTL = packUint8ToFloat(imagePosA.tl[0], imagePosA.tl[1]);
-                    const aBR = packUint8ToFloat(imagePosA.br[0], imagePosA.br[1]);
-                    const bTL = packUint8ToFloat(imagePosB.tl[0], imagePosB.tl[1]);
-                    const bBR = packUint8ToFloat(imagePosB.br[0], imagePosB.br[1]);
-
-                    for (let i = start; i < length; i++) {
-                        paintArray.emplaceBack(
-                            // u_pattern_tl_a, u_pattern_br_a
-                            aTL, aBR,
-                            // u_pattern_tl_b, u_pattern_br_b
-                            bTL, bBR
-                        );
-                    }
-                }
-            }
-        }
-    }
     /**
      * Add two vertices to the buffers.
      *
