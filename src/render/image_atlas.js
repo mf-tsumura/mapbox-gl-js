@@ -21,7 +21,8 @@ export class ImagePosition {
     pixelRatio: number;
 
     constructor(paddedRect: Rect, {pixelRatio}: StyleImage) {
-        this.paddedRect = paddedRect;
+        const {x, y, w, h} = paddedRect;
+        this.paddedRect = {x, y, w, h};
         this.pixelRatio = pixelRatio;
     }
 
