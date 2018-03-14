@@ -55,10 +55,7 @@ function drawLineTile(program, painter, tile, bucket, layer, coord, programConfi
     const context = painter.context;
     const gl = context.gl;
     const dasharray = layer.paint.get('line-dasharray');
-    const linePattern = layer.paint.get('line-pattern');
-    const image = linePattern && linePattern.value.kind === "constant" ? linePattern.value.value : null;
-    const crossfade = layer.getCrossfadeParameters();
-    let posA, posB, imagePosMid, imagePosMin, imagePosMax;
+    let posA, posB;
     const tileRatio = 1 / pixelsToTileUnits(tile, 1, painter.transform.tileZoom);
     if (programChanged || tileRatioChanged) {
         if (dasharray) {
@@ -71,15 +68,6 @@ function drawLineTile(program, painter, tile, bucket, layer, coord, programConfi
             gl.uniform2f(program.uniforms.u_patternscale_a, tileRatio / widthA, -posA.height / 2);
             gl.uniform2f(program.uniforms.u_patternscale_b, tileRatio / widthB, -posB.height / 2);
             gl.uniform1f(program.uniforms.u_sdfgamma, painter.lineAtlas.width / (Math.min(widthA, widthB) * 256 * browser.devicePixelRatio) / 2);
-        } else if (image) {
-            imagePosMin = painter.imageManager.getPattern(image.min);
-            imagePosMid = painter.imageManager.getPattern(image.mid);
-            imagePosMax = painter.imageManager.getPattern(image.max);
-            if (!imagePosMin || !imagePosMid || !imagePosMax) return;
-            // this assumes all images in the icon atlas texture have the same pixel ratio
-            gl.uniform4f(program.uniforms.u_scale, imagePosMid.pixelRatio, tileRatio, image.fromScale, image.toScale);
-            const {width, height} = painter.imageManager.getPixelSize();
-            gl.uniform2fv(program.uniforms.u_texsize, [width, height]);
         }
 
         gl.uniform2f(program.uniforms.u_gl_units_to_pixels, 1 / painter.transform.pixelsToGLUnits[0], 1 / painter.transform.pixelsToGLUnits[1]);
@@ -94,22 +82,33 @@ function drawLineTile(program, painter, tile, bucket, layer, coord, programConfi
             gl.uniform1f(program.uniforms.u_tex_y_a, (posA: any).y);
             gl.uniform1f(program.uniforms.u_tex_y_b, (posB: any).y);
             gl.uniform1f(program.uniforms.u_mix, dasharray.t);
-        } else if (image) {
-            gl.uniform1i(program.uniforms.u_image, 0);
-            context.activeTexture.set(gl.TEXTURE0);
-            painter.imageManager.bind(context);
-            gl.uniform4fv(program.uniforms.u_pattern_min, (imagePosMin: any).tl.concat((imagePosMin: any).br));
-            gl.uniform4fv(program.uniforms.u_pattern_mid, (imagePosMid: any).tl.concat((imagePosMid: any).br));
-            gl.uniform4fv(program.uniforms.u_pattern_max, (imagePosMax: any).tl.concat((imagePosMax: any).br));
-            gl.uniform1f(program.uniforms.u_fade, image.t);
-            gl.uniform1i(program.uniforms.u_zoomin, image.fromScale === 2 ? 1 : 0);
         }
     }
 
-    if (linePattern.value.kind !== "constant") {
+    const linePattern = layer.paint.get('line-pattern');
+    const crossfade = layer.getCrossfadeParameters();
+    const image = linePattern && linePattern.value.kind === "constant" ? linePattern.value.value : null;
+    if (image && tile.iconAtlas) {
+        const imagePosMin = tile.iconAtlas.positions[image.min];
+        const imagePosMid = tile.iconAtlas.positions[image.mid];
+        const imagePosMax = tile.iconAtlas.positions[image.max];
+        if (!imagePosMin || !imagePosMid || !imagePosMax) return;
+        // this assumes all images in the icon atlas texture have the same pixel ratio
+        gl.uniform4f(program.uniforms.u_scale, imagePosMid.pixelRatio, tileRatio, image.fromScale, image.toScale);
+        gl.uniform2fv(program.uniforms.u_texsize, tile.iconAtlasTexture.size);
+
         gl.uniform1i(program.uniforms.u_image, 0);
         context.activeTexture.set(gl.TEXTURE0);
-        tile.iconAtlasTexture.bind(gl.NEAREST, gl.CLAMP_TO_EDGE);
+        tile.iconAtlasTexture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE);
+        gl.uniform4fv(program.uniforms.u_pattern_min, (imagePosMin: any).tl.concat((imagePosMin: any).br));
+        gl.uniform4fv(program.uniforms.u_pattern_mid, (imagePosMid: any).tl.concat((imagePosMid: any).br));
+        gl.uniform4fv(program.uniforms.u_pattern_max, (imagePosMax: any).tl.concat((imagePosMax: any).br));
+        gl.uniform1f(program.uniforms.u_fade, image.t);
+        gl.uniform1i(program.uniforms.u_zoomin, image.fromScale === 2 ? 1 : 0);
+    } else if (linePattern.value.kind !== "constant") {
+        gl.uniform1i(program.uniforms.u_image, 0);
+        context.activeTexture.set(gl.TEXTURE0);
+        tile.iconAtlasTexture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE);
         gl.uniform1i(program.uniforms.u_zoomin, crossfade.fromScale === 2 ? 1 : 0);
         gl.uniform1f(program.uniforms.u_fade, crossfade.t);
         const size = tile.iconAtlasTexture.size;

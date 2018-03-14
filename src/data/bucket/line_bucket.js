@@ -138,28 +138,22 @@ class LineBucket implements Bucket {
         const icons = options.iconDependencies;
         this.features = [];
 
-        const dataDrivenPatternLayers = [];
-        for (let i = 0; i < this.layers.length; i++) {
-            const layer = this.layers[i];
+        // add all icons needed for this tile to the tile's IconAtlas dependencies
+        for (const layer of this.layers) {
             const linePattern = layer.paint.get('line-pattern');
-            if (linePattern.value.kind === "source" || linePattern.value.kind === "composite") {
-                dataDrivenPatternLayers.push(layer);
-            } else {
-                // add all icons needed for this tile to the tile's IconAtlas dependencies
-                // for non-data-driven line-pattern properties
-                const image = linePattern.constantOr(null);
-                if (image) {
-                    icons[image.min] = true;
-                    icons[image.mid] = true;
-                    icons[image.max] = true;
-                }
+            const image = linePattern.constantOr(null);
+            if (image) {
+                icons[image.min] = true;
+                icons[image.mid] = true;
+                icons[image.max] = true;
             }
         }
 
         for (const {feature, index, sourceLayerIndex} of features) {
             if (!this.layers[0]._featureFilter({zoom: this.zoom}, feature)) continue;
-            for (let i = 0; i < dataDrivenPatternLayers.length; i++) {
-                const layer = dataDrivenPatternLayers[i];
+            for (let i = 0; i < this.dataDrivenPatternLayers.length; i++) {
+                const layerIdx = this.dataDrivenPatternLayers[i];
+                const layer = this.layers[layerIdx];
                 const linePattern = layer.paint.get('line-pattern');
                 const image = linePattern.evaluate(feature);
                 if (image) {
@@ -167,15 +161,16 @@ class LineBucket implements Bucket {
                     icons[image.mid] = true;
                     icons[image.max] = true;
                 }
+            }
 
-                const geometry = loadGeometry(feature);
-                const lineFeature: LineFeature = {
-                    sourceLayerIndex: sourceLayerIndex,
-                    index: index,
-                    geometry: geometry,
-                    properties: feature.properties,
-                    type: feature.type
-                };
+            const geometry = loadGeometry(feature);
+            const lineFeature: LineFeature = {
+                sourceLayerIndex: sourceLayerIndex,
+                index: index,
+                geometry: geometry,
+                properties: feature.properties,
+                type: feature.type
+            };
 
             if (typeof feature.id !== 'undefined') {
                 lineFeature.id = feature.id;
