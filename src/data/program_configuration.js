@@ -89,8 +89,8 @@ interface Binder<T> {
                 program: Program,
                 globals: GlobalProperties,
                 currentValue: PossiblyEvaluatedPropertyValue<T>,
-                tile: ?Tile,
-                crossfade: ?CrossfadeParameters): void;
+                tile: Tile,
+                crossfade: CrossfadeParameters): void;
 }
 
 class ConstantBinder<T> implements Binder<T> {
@@ -681,7 +681,8 @@ export default class ProgramConfiguration {
         for (const property in this.binders) {
             const binder = this.binders[property];
             if ((binder instanceof SourceExpressionBinder ||
-                binder instanceof CompositeExpressionBinder) &&
+                binder instanceof CompositeExpressionBinder ||
+                binder instanceof PatternCompositeExpressionBinder) &&
                 binder.paintVertexBuffer
             ) {
                 buffers.push(binder.paintVertexBuffer);
@@ -742,7 +743,6 @@ export class ProgramConfigurationSet<Layer: TypedStyleLayer> {
     }
 }
 
-// paint property arrays
 function paintAttributeName(property, type) {
     const attributeNameExceptions = {
         'text-opacity': ['opacity'],

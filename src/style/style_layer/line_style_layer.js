@@ -18,6 +18,12 @@ import type {LayoutProps, PaintProps} from './line_style_layer_properties';
 import type Transform from '../../geo/transform';
 import type Texture from '../../render/texture';
 
+export type CrossfadeParameters = {
+    fromScale: number,
+    toScale: number,
+    t: number
+};
+
 class LineFloorwidthProperty extends DataDrivenProperty<number> {
     useIntegerZoom: true;
 
@@ -77,7 +83,7 @@ class LineStyleLayer extends StyleLayer {
             lineFloorwidthProperty.possiblyEvaluate(this._transitioningPaint._values['line-width'].value, parameters);
     }
 
-    getCrossfadeParameters(): {fromScale: number, toScale: number, t: number} {
+    getCrossfadeParameters(): CrossfadeParameters {
         const p = this.transitionParameters;
         const z = p.zoom;
         const fraction = z - Math.floor(z);

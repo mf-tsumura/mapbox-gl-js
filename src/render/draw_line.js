@@ -25,12 +25,11 @@ export default function drawLine(painter: Painter, sourceCache: SourceCache, lay
     const linePattern = layer.paint.get('line-pattern');
     const programId =
         layer.paint.get('line-dasharray') ? 'lineSDF' :
-        linePattern && linePattern.value && (linePattern.value.value || linePattern.value.kind === "source" || linePattern.value.kind === "composite") ? 'linePattern' :
+        linePattern && linePattern.constantOr((1: any)) ? 'linePattern' :
         layer.paint.get('line-gradient') ? 'lineGradient' : 'line';
 
     let prevTileZoom;
     let firstTile = true;
-
     for (const coord of coords) {
         const tile = sourceCache.getTile(coord);
         const bucket: ?LineBucket = (tile.getBucket(layer): any);
@@ -57,6 +56,14 @@ function drawLineTile(program, painter, tile, bucket, layer, coord, programConfi
     const dasharray = layer.paint.get('line-dasharray');
     let posA, posB;
     const tileRatio = 1 / pixelsToTileUnits(tile, 1, painter.transform.tileZoom);
+    const crossfade = layer.getCrossfadeParameters();
+    programConfiguration.updatePatternPaintBuffers(crossfade);
+    programConfiguration.setTileSpecificUniforms(painter.context,
+                                                 program,
+                                                 layer.paint,
+                                                 {zoom: painter.transform.zoom, tileRatio: tileRatio},
+                                                 tile,
+                                                 crossfade);
     if (programChanged || tileRatioChanged) {
         if (dasharray) {
             posA = painter.lineAtlas.getDash(dasharray.from, layer.layout.get('line-cap') === 'round');
@@ -73,54 +80,20 @@ function drawLineTile(program, painter, tile, bucket, layer, coord, programConfi
         gl.uniform2f(program.uniforms.u_gl_units_to_pixels, 1 / painter.transform.pixelsToGLUnits[0], 1 / painter.transform.pixelsToGLUnits[1]);
     }
 
-    if (programChanged) {
-        if (dasharray) {
-            gl.uniform1i(program.uniforms.u_image, 0);
-            context.activeTexture.set(gl.TEXTURE0);
-            painter.lineAtlas.bind(context);
-
-            gl.uniform1f(program.uniforms.u_tex_y_a, (posA: any).y);
-            gl.uniform1f(program.uniforms.u_tex_y_b, (posB: any).y);
-            gl.uniform1f(program.uniforms.u_mix, dasharray.t);
-        }
-    }
-
-    const linePattern = layer.paint.get('line-pattern');
-    const crossfade = layer.getCrossfadeParameters();
-    const image = linePattern && linePattern.value.kind === "constant" ? linePattern.value.value : null;
-    if (image && tile.iconAtlas) {
-        const imagePosMin = tile.iconAtlas.positions[image.min];
-        const imagePosMid = tile.iconAtlas.positions[image.mid];
-        const imagePosMax = tile.iconAtlas.positions[image.max];
-        if (!imagePosMin || !imagePosMid || !imagePosMax) return;
-        // this assumes all images in the icon atlas texture have the same pixel ratio
-        gl.uniform4f(program.uniforms.u_scale, imagePosMid.pixelRatio, tileRatio, image.fromScale, image.toScale);
-        gl.uniform2fv(program.uniforms.u_texsize, tile.iconAtlasTexture.size);
-
+    if (programChanged && dasharray) {
         gl.uniform1i(program.uniforms.u_image, 0);
         context.activeTexture.set(gl.TEXTURE0);
-        tile.iconAtlasTexture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE);
-        gl.uniform4fv(program.uniforms.u_pattern_min, (imagePosMin: any).tl.concat((imagePosMin: any).br));
-        gl.uniform4fv(program.uniforms.u_pattern_mid, (imagePosMid: any).tl.concat((imagePosMid: any).br));
-        gl.uniform4fv(program.uniforms.u_pattern_max, (imagePosMax: any).tl.concat((imagePosMax: any).br));
-        gl.uniform1f(program.uniforms.u_fade, image.t);
-        gl.uniform1i(program.uniforms.u_zoomin, image.fromScale === 2 ? 1 : 0);
-    } else if (linePattern.value.kind !== "constant") {
-        gl.uniform1i(program.uniforms.u_image, 0);
-        context.activeTexture.set(gl.TEXTURE0);
-        tile.iconAtlasTexture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE);
-        gl.uniform1i(program.uniforms.u_zoomin, crossfade.fromScale === 2 ? 1 : 0);
-        gl.uniform1f(program.uniforms.u_fade, crossfade.t);
-        const size = tile.iconAtlasTexture.size;
-        gl.uniform2fv(program.uniforms.u_texsize, size);
-        gl.uniform4f(program.uniforms.u_scale, browser.devicePixelRatio > 1 ? 2 : 1, tileRatio, crossfade.fromScale, crossfade.toScale);
+        painter.lineAtlas.bind(context);
+
+        gl.uniform1f(program.uniforms.u_tex_y_a, (posA: any).y);
+        gl.uniform1f(program.uniforms.u_tex_y_b, (posB: any).y);
+        gl.uniform1f(program.uniforms.u_mix, dasharray.t);
     }
 
     context.setStencilMode(painter.stencilModeForClipping(coord));
 
     const posMatrix = painter.translatePosMatrix(coord.posMatrix, tile, layer.paint.get('line-translate'), layer.paint.get('line-translate-anchor'));
     gl.uniformMatrix4fv(program.uniforms.u_matrix, false, posMatrix);
-
     gl.uniform1f(program.uniforms.u_ratio, 1 / pixelsToTileUnits(tile, 1, painter.transform.zoom));
 
     if (layer.paint.get('line-gradient')) {

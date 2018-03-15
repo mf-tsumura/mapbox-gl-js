@@ -10,24 +10,22 @@ varying vec2 v_width2;
 varying float v_linesofar;
 varying float v_gamma_scale;
 
-#pragma mapbox: define mediump vec4 pattern_min
-#pragma mapbox: define mediump vec4 pattern_mid
-#pragma mapbox: define mediump vec4 pattern_max
+#pragma mapbox: define mediump vec4 pattern_from
+#pragma mapbox: define mediump vec4 pattern_to
 #pragma mapbox: define lowp float blur
 #pragma mapbox: define lowp float opacity
 
 void main() {
-    #pragma mapbox: initialize mediump vec4 pattern_min
-    #pragma mapbox: initialize mediump vec4 pattern_mid
-    #pragma mapbox: initialize mediump vec4 pattern_max
+    #pragma mapbox: initialize mediump vec4 pattern_from
+    #pragma mapbox: initialize mediump vec4 pattern_to
 
     #pragma mapbox: initialize lowp float blur
     #pragma mapbox: initialize lowp float opacity
 
-    vec2 u_pattern_tl_a = u_zoomin ? pattern_min.xy : pattern_max.xy;
-    vec2 u_pattern_br_a = u_zoomin ? pattern_min.zw : pattern_max.zw;
-    vec2 u_pattern_tl_b = pattern_mid.xy;
-    vec2 u_pattern_br_b = pattern_mid.zw;
+    vec2 u_pattern_tl_a = pattern_from.xy;
+    vec2 u_pattern_br_a = pattern_from.zw;
+    vec2 u_pattern_tl_b = pattern_to.xy;
+    vec2 u_pattern_br_b = pattern_to.zw;
 
     float pixelRatio = u_scale.x;
     float tileRatio = u_scale.y;
