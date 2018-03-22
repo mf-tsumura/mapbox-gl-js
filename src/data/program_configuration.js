@@ -560,16 +560,16 @@ export default class ProgramConfiguration {
                 }
                 keys.push(`/u_${property}`);
             } else if (property.match(/line-pattern/)) {
-                const structArrayLayout = layoutType(property, type, 'source');
-                self.binders[property] = new PatternCompositeExpressionBinder(value.value, names, type, useIntegerZoom, zoom, structArrayLayout);
+                const StructArrayLayout = layoutType(property, type, 'source');
+                self.binders[property] = new PatternCompositeExpressionBinder(value.value, names, type, useIntegerZoom, zoom, StructArrayLayout);
                 keys.push(`/p_${property}`);
             } else if (value.value.kind === 'source') {
-                const structArrayLayout = layoutType(property, type, 'source');
-                self.binders[property] = new SourceExpressionBinder(value.value, names, type, structArrayLayout);
+                const StructArrayLayout = layoutType(property, type, 'source');
+                self.binders[property] = new SourceExpressionBinder(value.value, names, type, StructArrayLayout);
                 keys.push(`/a_${property}`);
             } else {
-                const structArrayLayout = layoutType(property, type, 'composite');
-                self.binders[property] = new CompositeExpressionBinder(value.value, names, type, useIntegerZoom, zoom, structArrayLayout);
+                const StructArrayLayout = layoutType(property, type, 'composite');
+                self.binders[property] = new CompositeExpressionBinder(value.value, names, type, useIntegerZoom, zoom, StructArrayLayout);
                 keys.push(`/z_${property}`);
             }
         }

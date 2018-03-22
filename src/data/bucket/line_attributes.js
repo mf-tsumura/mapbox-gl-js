@@ -13,5 +13,4 @@ export const linePatternAttributes = createLayout([
     {name: 'a_pattern_to', components: 4, type: 'Float32'}
 ]);
 
-export default lineLayoutAttributes;
 export const {members, size, alignment} = lineLayoutAttributes;

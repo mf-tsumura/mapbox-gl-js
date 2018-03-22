@@ -51,6 +51,7 @@ export class ImagePosition {
 export default class ImageAtlas {
     image: RGBAImage;
     positions: {[string]: ImagePosition};
+    uploaded: ?boolean;
 
     constructor(images: {[string]: StyleImage}) {
         const image = new RGBAImage({width: 0, height: 0});

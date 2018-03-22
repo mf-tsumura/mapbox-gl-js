@@ -230,9 +230,9 @@ class Tile {
         }
 
         const gl = context.gl;
-
-        if (this.iconAtlas) {
+        if (this.iconAtlas && !this.iconAtlas.uploaded) {
             this.iconAtlasTexture = new Texture(context, this.iconAtlas.image, gl.RGBA);
+            this.iconAtlas.uploaded = true;
         }
 
         if (this.glyphAtlasImage) {
