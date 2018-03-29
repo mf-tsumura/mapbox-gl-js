@@ -144,7 +144,7 @@ class CircleBucket<Layer: CircleStyleLayer | HeatmapStyleLayer> implements Bucke
             }
         }
 
-        this.programConfigurations.populatePaintArrays(this.layoutVertexArray.length, feature, index);
+        this.programConfigurations.populatePaintArrays(this.layoutVertexArray.length, feature, index, {});
     }
 }
 
