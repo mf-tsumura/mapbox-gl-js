@@ -587,6 +587,12 @@ export class DataDrivenProperty<T> implements Property<T, PossiblyEvaluatedPrope
 
 export class CrossFadedDataDrivenProperty<T> extends DataDrivenProperty<?CrossFaded<T>> {
     possibleOutputs: Array<T>;
+    binder: string;
+
+    constructor(specification: StylePropertySpecification) {
+        super(specification);
+        this.binder = 'cross-faded';
+    }
 
     possiblyEvaluate(value: PropertyValue<?CrossFaded<T>, PossiblyEvaluatedPropertyValue<?CrossFaded<T>>>, parameters: EvaluationParameters): PossiblyEvaluatedPropertyValue<?CrossFaded<T>> {
         this.possibleOutputs = [];
@@ -650,9 +656,11 @@ export class CrossFadedDataDrivenProperty<T> extends DataDrivenProperty<?CrossFa
  */
 export class CrossFadedProperty<T> implements Property<T, ?CrossFaded<T>> {
     specification: StylePropertySpecification;
+    binder: string;
 
     constructor(specification: StylePropertySpecification) {
         this.specification = specification;
+        this.binder = 'cross-faded';
     }
 
     possiblyEvaluate(value: PropertyValue<T, ?CrossFaded<T>>, parameters: EvaluationParameters): ?CrossFaded<T> {

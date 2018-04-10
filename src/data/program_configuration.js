@@ -133,7 +133,7 @@ class ConstantBinder<T> implements Binder<T> {
     }
 }
 
-class PatternConstantBinder<T> implements Binder<T> {
+class CrossFadedConstantBinder<T> implements Binder<T> {
     value: T;
     names: Array<string>;
     type: string;
@@ -380,7 +380,7 @@ class CompositeExpressionBinder<T> implements Binder<T> {
     setTileSpecificUniforms() {}
 }
 
-class PatternCompositeExpressionBinder<T> implements Binder<T> {
+class CrossFadedCompositeBinder<T> implements Binder<T> {
     expression: CompositeExpression;
     names: Array<string>;
     type: string;
@@ -552,17 +552,18 @@ export default class ProgramConfiguration {
             const names = paintAttributeName(property, layer.type);
             const type = value.property.specification.type;
             const useIntegerZoom = value.property.useIntegerZoom;
-            if (value.value.kind === 'constant') {
-                if (property.match(/line-pattern/)) {
-                    self.binders[property] = new PatternConstantBinder(value.value, names, type);
+            if (value.property.binder === 'cross-faded') {
+                if (value.value.kind === 'constant') {
+                    self.binders[property] = new CrossFadedConstantBinder(value.value, names, type);
+                    keys.push(`/u_${property}`);
                 } else {
-                    self.binders[property] = new ConstantBinder(value.value, names, type);
+                    const StructArrayLayout = layoutType(property, type, 'source');
+                    self.binders[property] = new CrossFadedCompositeBinder(value.value, names, type, useIntegerZoom, zoom, StructArrayLayout);
+                    keys.push(`/a_${property}`);
                 }
+            } else if (value.value.kind === 'constant') {
+                self.binders[property] = new ConstantBinder(value.value, names, type);
                 keys.push(`/u_${property}`);
-            } else if (property.match(/line-pattern/)) {
-                const StructArrayLayout = layoutType(property, type, 'source');
-                self.binders[property] = new PatternCompositeExpressionBinder(value.value, names, type, useIntegerZoom, zoom, StructArrayLayout);
-                keys.push(`/p_${property}`);
             } else if (value.value.kind === 'source') {
                 const StructArrayLayout = layoutType(property, type, 'source');
                 self.binders[property] = new SourceExpressionBinder(value.value, names, type, StructArrayLayout);
@@ -582,7 +583,7 @@ export default class ProgramConfiguration {
     populatePaintArrays(newLength: number, feature: Feature, index: number, imagePositions: {[string]: ImagePosition}) {
         for (const property in this.binders) {
             const binder = this.binders[property];
-            if (binder instanceof PatternCompositeExpressionBinder) {
+            if (binder instanceof CrossFadedCompositeBinder) {
                 binder.populatePaintArray(newLength, feature, imagePositions);
             } else {
                 binder.populatePaintArray(newLength, feature, {});
@@ -658,7 +659,7 @@ export default class ProgramConfiguration {
 
         for (const property in this.binders) {
             const binder = this.binders[property];
-            if (binder instanceof PatternCompositeExpressionBinder) {
+            if (binder instanceof CrossFadedCompositeBinder) {
                 const patternVertexBuffer = binder.getVertexBuffer(crossfade);
                 if (patternVertexBuffer) buffers.push(patternVertexBuffer);
             } else if ((binder instanceof SourceExpressionBinder ||
@@ -791,9 +792,9 @@ function layoutType(property, type, binderType) {
 }
 
 register('ConstantBinder', ConstantBinder);
-register('PatternConstantBinder', PatternConstantBinder);
+register('CrossFadedConstantBinder', CrossFadedConstantBinder);
 register('SourceExpressionBinder', SourceExpressionBinder);
-register('PatternCompositeExpressionBinder', PatternCompositeExpressionBinder);
+register('CrossFadedCompositeBinder', CrossFadedCompositeBinder);
 register('CompositeExpressionBinder', CompositeExpressionBinder);
 register('ProgramConfiguration', ProgramConfiguration, {omit: ['_buffers']});
 register('ProgramConfigurationSet', ProgramConfigurationSet);
