@@ -7,6 +7,7 @@ import { CollisionBoxArray } from '../data/array_types';
 import DictionaryCoder from '../util/dictionary_coder';
 import SymbolBucket from '../data/bucket/symbol_bucket';
 import LineBucket from '../data/bucket/line_bucket';
+import FillBucket from '../data/bucket/fill_bucket';
 import { warnOnce, mapObject, values } from '../util/util';
 import assert from 'assert';
 import ImageAtlas from '../render/image_atlas';
@@ -162,7 +163,7 @@ class WorkerTile {
                     if (bucket instanceof SymbolBucket) {
                         recalculateLayers(bucket.layers, this.zoom);
                         performSymbolLayout(bucket, glyphMap, glyphAtlas.positions, imageMap, imageAtlas.positions, this.showCollisionBoxes);
-                    } else if (bucket instanceof LineBucket) {
+                    } else if (bucket instanceof LineBucket || bucket instanceof FillBucket) {
                         recalculateLayers(bucket.layers, this.zoom);
                         bucket.addFeatures(options, imageAtlas.positions);
                     }

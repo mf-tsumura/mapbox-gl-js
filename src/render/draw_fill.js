@@ -1,11 +1,5 @@
 // @flow
 
-import {
-    isPatternMissing,
-    setPatternUniforms,
-    prepare as preparePattern
-} from './pattern';
-
 import Color from '../style-spec/util/color';
 import DepthMode from '../gl/depth_mode';
 
@@ -29,7 +23,8 @@ function drawFill(painter: Painter, sourceCache: SourceCache, layer: FillStyleLa
     const context = painter.context;
     context.setColorMode(painter.colorModeForRenderPass());
 
-    const pass = (!layer.paint.get('fill-pattern') &&
+    const pattern = layer.paint.get('fill-pattern');
+    const pass = (!(pattern.constantOr(null) || pattern.property.getPossibleOutputs().length) &&
         color.constantOr(Color.transparent).a === 1 &&
         opacity.constantOr(0) === 1) ? 'opaque' : 'translucent';
 
@@ -60,11 +55,20 @@ function drawFill(painter: Painter, sourceCache: SourceCache, layer: FillStyleLa
 }
 
 function drawFillTiles(painter, sourceCache, layer, coords, drawFn) {
-    if (isPatternMissing(layer.paint.get('fill-pattern'), painter)) return;
+    // if (isPatternMissing(layer.paint.get('fill-pattern'), painter)) return;
 
+    // if (layer.paint.get('fill-pattern').constantOr(1) )
     let firstTile = true;
     for (const coord of coords) {
         const tile = sourceCache.getTile(coord);
+
+        const pattern = layer.paint.get('fill-pattern').constantOr(null);
+        if (pattern && tile.iconAtlas) {
+            const imagePosFrom = tile.iconAtlas.positions[pattern.from],
+                imagePosTo = tile.iconAtlas.positions[pattern.to];
+            if (!imagePosFrom || !imagePosTo) return;
+        }
+
         const bucket: ?FillBucket = (tile.getBucket(layer): any);
         if (!bucket) continue;
 
@@ -77,8 +81,8 @@ function drawFillTiles(painter, sourceCache, layer, coords, drawFn) {
 function drawFillTile(painter, sourceCache, layer, tile, coord, bucket, firstTile) {
     const gl = painter.context.gl;
     const programConfiguration = bucket.programConfigurations.get(layer.id);
-
-    const program = setFillProgram('fill', layer.paint.get('fill-pattern'), painter, programConfiguration, layer, tile, coord, firstTile);
+    const pattern = layer.paint.get('fill-pattern');
+    const program = setFillProgram('fill', pattern && pattern.constantOr((1: any)), painter, programConfiguration, layer, tile, coord, firstTile);
 
     program.draw(
         painter.context,
@@ -93,7 +97,7 @@ function drawFillTile(painter, sourceCache, layer, tile, coord, bucket, firstTil
 function drawStrokeTile(painter, sourceCache, layer, tile, coord, bucket, firstTile) {
     const gl = painter.context.gl;
     const programConfiguration = bucket.programConfigurations.get(layer.id);
-    const pattern = layer.getPaintProperty('fill-outline-color') ? null : layer.paint.get('fill-pattern');
+    const pattern = layer.getPaintProperty('fill-outline-color') ? null : layer.paint.get('fill-pattern').constantOr((1: any));
 
     const program = setFillProgram('fillOutline', pattern, painter, programConfiguration, layer, tile, coord, firstTile);
     gl.uniform2f(program.uniforms.u_world, gl.drawingBufferWidth, gl.drawingBufferHeight);
@@ -120,9 +124,17 @@ function setFillProgram(programId, pat: ?CrossFaded<string>, painter, programCon
         program = painter.useProgram(`${programId}Pattern`, programConfiguration);
         if (firstTile || program.program !== prevProgram) {
             programConfiguration.setUniforms(painter.context, program, layer.paint, {zoom: painter.transform.zoom});
-            preparePattern(pat, painter, program);
         }
-        setPatternUniforms(tile, painter, program);
+        const crossfade = layer.getCrossfadeParameters();
+        programConfiguration.updatePatternPaintBuffers(crossfade);
+        programConfiguration.setTileSpecificUniforms(painter.context,
+                                                     program,
+                                                     layer.paint,
+                                                     {zoom: painter.transform.zoom},
+                                                     painter.transform.tileZoom,
+                                                     tile,
+                                                     crossfade);
+
     }
     painter.context.gl.uniformMatrix4fv(program.uniforms.u_matrix, false, painter.translatePosMatrix(
         coord.posMatrix, tile,

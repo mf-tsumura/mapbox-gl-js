@@ -1,7 +1,6 @@
 uniform vec2 u_texsize;
 uniform float u_fade;
 uniform vec4 u_scale;
-uniform bool u_zoomin;
 
 uniform sampler2D u_image;
 

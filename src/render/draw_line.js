@@ -61,7 +61,8 @@ function drawLineTile(program, painter, tile, bucket, layer, coord, programConfi
     programConfiguration.setTileSpecificUniforms(painter.context,
                                                  program,
                                                  layer.paint,
-                                                 {zoom: painter.transform.zoom, tileRatio: tileRatio},
+                                                 {zoom: painter.transform.zoom},
+                                                 painter.transform.tileZoom,
                                                  tile,
                                                  crossfade);
     if (programChanged || tileRatioChanged) {

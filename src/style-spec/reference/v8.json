@@ -3390,6 +3390,9 @@
     },
     "fill-pattern": {
       "type": "string",
+      "function": "piecewise-constant",
+      "zoom-function": true,
+      "property-function": true,
       "transition": true,
       "doc": "Name of image in sprite to use for drawing image fills. For seamless patterns, image width and height must be a factor of two (2, 4, 8, ..., 512). Note that zoom-dependent expressions will be evaluated only at integer zoom levels.",
       "sdk-support": {
