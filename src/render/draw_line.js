@@ -25,13 +25,26 @@ export default function drawLine(painter: Painter, sourceCache: SourceCache, lay
     const linePattern = layer.paint.get('line-pattern');
     const programId =
         layer.paint.get('line-dasharray') ? 'lineSDF' :
-        linePattern && linePattern.constantOr((1: any)) ? 'linePattern' :
+        linePattern && linePattern.property.getPossibleOutputs().length ? 'linePattern' :
         layer.paint.get('line-gradient') ? 'lineGradient' : 'line';
 
     let prevTileZoom;
     let firstTile = true;
     for (const coord of coords) {
         const tile = sourceCache.getTile(coord);
+
+        const pattern = linePattern.constantOr((1: any));
+        if (pattern && !tile.iconAtlas) continue;
+        if (pattern && tile.iconAtlas) {
+            // pattern is set, but the icon atlas hasn't been populated yet
+            if (!Object.keys(tile.iconAtlas.positions).length) continue;
+            if (pattern.to && pattern.from) {
+                const imagePosFrom = tile.iconAtlas.positions[pattern.from],
+                    imagePosTo = tile.iconAtlas.positions[pattern.to];
+                if (!imagePosFrom || !imagePosTo) continue;
+            }
+        }
+
         const bucket: ?LineBucket = (tile.getBucket(layer): any);
         if (!bucket) continue;
 

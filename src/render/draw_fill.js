@@ -8,7 +8,6 @@ import type SourceCache from '../source/source_cache';
 import type FillStyleLayer from '../style/style_layer/fill_style_layer';
 import type FillBucket from '../data/bucket/fill_bucket';
 import type {OverscaledTileID} from '../source/tile_id';
-import type {CrossFaded} from '../style/cross_faded';
 
 export default drawFill;
 
@@ -55,18 +54,20 @@ function drawFill(painter: Painter, sourceCache: SourceCache, layer: FillStyleLa
 }
 
 function drawFillTiles(painter, sourceCache, layer, coords, drawFn) {
-    // if (isPatternMissing(layer.paint.get('fill-pattern'), painter)) return;
-
-    // if (layer.paint.get('fill-pattern').constantOr(1) )
     let firstTile = true;
     for (const coord of coords) {
         const tile = sourceCache.getTile(coord);
-
-        const pattern = layer.paint.get('fill-pattern').constantOr(null);
+        const pattern = layer.paint.get('fill-pattern').constantOr((1: any));
+        if (pattern && !tile.iconAtlas) continue;
         if (pattern && tile.iconAtlas) {
-            const imagePosFrom = tile.iconAtlas.positions[pattern.from],
-                imagePosTo = tile.iconAtlas.positions[pattern.to];
-            if (!imagePosFrom || !imagePosTo) return;
+            // pattern is set, but the icon atlas hasn't been populated yet
+            if (!Object.keys(tile.iconAtlas.positions).length) continue;
+            if (pattern.to && pattern.from) {
+                const imagePosFrom = tile.iconAtlas.positions[pattern.from],
+                    imagePosTo = tile.iconAtlas.positions[pattern.to];
+                if (!imagePosFrom || !imagePosTo) continue;
+            }
+
         }
 
         const bucket: ?FillBucket = (tile.getBucket(layer): any);
@@ -82,8 +83,7 @@ function drawFillTile(painter, sourceCache, layer, tile, coord, bucket, firstTil
     const gl = painter.context.gl;
     const programConfiguration = bucket.programConfigurations.get(layer.id);
     const pattern = layer.paint.get('fill-pattern');
-    const program = setFillProgram('fill', pattern && pattern.constantOr((1: any)), painter, programConfiguration, layer, tile, coord, firstTile);
-
+    const program = setFillProgram('fill', !!(pattern && pattern.property.getPossibleOutputs().length), painter, programConfiguration, layer, tile, coord, firstTile);
     program.draw(
         painter.context,
         gl.TRIANGLES,
@@ -97,7 +97,8 @@ function drawFillTile(painter, sourceCache, layer, tile, coord, bucket, firstTil
 function drawStrokeTile(painter, sourceCache, layer, tile, coord, bucket, firstTile) {
     const gl = painter.context.gl;
     const programConfiguration = bucket.programConfigurations.get(layer.id);
-    const pattern = layer.getPaintProperty('fill-outline-color') ? null : layer.paint.get('fill-pattern').constantOr((1: any));
+    const patternProperty = layer.paint.get('fill-pattern');
+    const pattern = layer.getPaintProperty('fill-outline-color') ? false : !!(patternProperty && patternProperty.property.getPossibleOutputs().length);
 
     const program = setFillProgram('fillOutline', pattern, painter, programConfiguration, layer, tile, coord, firstTile);
     gl.uniform2f(program.uniforms.u_world, gl.drawingBufferWidth, gl.drawingBufferHeight);
@@ -112,7 +113,7 @@ function drawStrokeTile(painter, sourceCache, layer, tile, coord, bucket, firstT
         programConfiguration);
 }
 
-function setFillProgram(programId, pat: ?CrossFaded<string>, painter, programConfiguration, layer, tile, coord, firstTile) {
+function setFillProgram(programId, pat: boolean, painter, programConfiguration, layer, tile, coord, firstTile) {
     let program;
     const prevProgram = painter.context.program.get();
     if (!pat) {
