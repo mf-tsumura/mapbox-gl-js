@@ -625,9 +625,9 @@ export class CrossFadedDataDrivenProperty<T> extends DataDrivenProperty<?CrossFa
             return this._calculate(constant, constant, constant, globals);
         } else if (value.kind === 'composite') {
             return this._calculate(
-                value.evaluate({zoom: globals.zoom - 1.0}, feature),
-                value.evaluate({zoom: globals.zoom}, feature),
-                value.evaluate({zoom: globals.zoom + 1.0}, feature),
+                value.evaluate({zoom: Math.floor(globals.zoom - 1.0)}, feature),
+                value.evaluate({zoom: Math.floor(globals.zoom)}, feature),
+                value.evaluate({zoom: Math.floor(globals.zoom + 1.0)}, feature),
                 globals);
         } else {
             return value.value;
