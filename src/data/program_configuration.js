@@ -206,12 +206,11 @@ class SourceExpressionBinder<T> implements Binder<T> {
     paintVertexAttributes: Array<StructArrayMember>;
     paintVertexBuffer: ?VertexBuffer;
 
-    constructor(expression: SourceExpression, names: Array<string>, type: string, layout: Class<StructArray>) {
+    constructor(expression: SourceExpression, names: Array<string>, type: string, PaintVertexArray: Class<StructArray>) {
         this.expression = expression;
         this.names = names;
         this.type = type;
         this.statistics = { max: -Infinity };
-        const PaintVertexArray = layout;
         this.paintVertexAttributes = names.map((name) =>
             ({
                 name: `a_${name}`,

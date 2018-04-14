@@ -139,8 +139,7 @@ class LineBucket implements Bucket {
         this.features = [];
 
         const dataDrivenPatternLayers = [];
-        for (let i = 0; i < this.layers.length; i++) {
-            const layer = this.layers[i];
+        for (const layer of this.layers) {
             const linePattern = layer.paint.get('line-pattern');
             if (linePattern.value.kind === "source" || linePattern.value.kind === "composite") {
                 dataDrivenPatternLayers.push(layer);
@@ -193,10 +192,9 @@ class LineBucket implements Bucket {
     }
 
     addFeatures(options: PopulateParameters, imagePositions: {[string]: ImagePosition}) {
-        this.imagePositions = imagePositions;
         for (const feature of this.features) {
             const {geometry} = feature;
-            this.addFeature(feature, geometry);
+            this.addFeature(feature, geometry, imagePositions);
         }
     }
 
@@ -225,7 +223,7 @@ class LineBucket implements Bucket {
         this.segments.destroy();
     }
 
-    addFeature(feature: VectorTileFeature | LineFeature, geometry: Array<Array<Point>>, index: number) {
+    addFeature(feature: LineFeature, geometry: Array<Array<Point>>, index: number, imagePositions: {[string]: ImagePosition}) {
         const layout = this.layers[0].layout;
         const join = layout.get('line-join').evaluate(feature);
         const cap = layout.get('line-cap');
@@ -233,11 +231,11 @@ class LineBucket implements Bucket {
         const roundLimit = layout.get('line-round-limit');
 
         for (const line of geometry) {
-            this.addLine(line, feature, join, cap, miterLimit, roundLimit, index);
+            this.addLine(line, feature, join, cap, miterLimit, roundLimit, index, imagePositions);
         }
     }
 
-    addLine(vertices: Array<Point>, feature: VectorTileFeature | LineFeature, join: string, cap: string, miterLimit: number, roundLimit: number, index: number) {
+    addLine(vertices: Array<Point>, feature: LineFeature, join: string, cap: string, miterLimit: number, roundLimit: number, index: number, imagePositions: {[string]: ImagePosition}) {
         let lineDistances = null;
         if (!!feature.properties &&
             feature.properties.hasOwnProperty('mapbox_clip_start') &&
@@ -515,7 +513,7 @@ class LineBucket implements Bucket {
             startOfLine = false;
         }
 
-        this.programConfigurations.populatePaintArrays(this.layoutVertexArray.length, feature, index, this.imagePositions);
+        this.programConfigurations.populatePaintArrays(this.layoutVertexArray.length, feature, index, imagePositions);
     }
 
     /**
