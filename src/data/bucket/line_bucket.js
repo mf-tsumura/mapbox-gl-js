@@ -144,13 +144,11 @@ class LineBucket implements Bucket {
             if (linePattern.value.kind === "source" || linePattern.value.kind === "composite") {
                 dataDrivenPatternLayers.push(layer);
             } else {
-                // add all icons needed for this layer to the tile's IconAtlas dependencies
-                // for non-data-driven line-pattern properties
-                const images = linePattern.property.getPossibleOutputs();
-                for (let i = 0; i < images.length; i++) {
-                    // https://github.com/facebook/flow/issues/4310
-                    icons[(images[i]: any)] = true;
-
+                const image = linePattern.constantOr(null);
+                if (image) {
+                    icons[image.min] = true;
+                    icons[image.mid] = true;
+                    icons[image.max] = true;
                 }
             }
         }

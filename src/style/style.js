@@ -757,8 +757,7 @@ class Style extends Evented {
         // if a cross-faded value is changed, we need to make sure the new icons get added to each tile's iconAtlas
         // so a call to _updateLayer is necessary
         const prop = layer.paint.get(name);
-        const newCrossFadedValue = prop.property.binder === 'cross-faded' && !prop.value.value && value;
-
+        const newCrossFadedValue = prop.property && prop.property.binder === 'cross-faded' && !prop.value.value && value;
         const wasDataDriven = layer._transitionablePaint._values[name].value.isDataDriven();
         layer.setPaintProperty(name, value);
         const isDataDriven = layer._transitionablePaint._values[name].value.isDataDriven();

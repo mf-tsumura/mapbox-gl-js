@@ -164,6 +164,7 @@ class CrossFadedConstantBinder<T> implements Binder<T> {
                             tile: Tile) {
         const image: any = currentValue.constantOr(this.value);
         const gl = context.gl;
+
         if (image && tile && tile.iconAtlas) {
             const imagePosFrom = tile.iconAtlas.positions[image.from],
                 imagePosTo = tile.iconAtlas.positions[image.to];

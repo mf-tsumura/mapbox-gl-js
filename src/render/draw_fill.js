@@ -23,7 +23,7 @@ function drawFill(painter: Painter, sourceCache: SourceCache, layer: FillStyleLa
     context.setColorMode(painter.colorModeForRenderPass());
 
     const pattern = layer.paint.get('fill-pattern');
-    const pass = (!(pattern.constantOr(null) || pattern.property.getPossibleOutputs().length) &&
+    const pass = (!pattern.constantOr((1: any)) &&
         color.constantOr(Color.transparent).a === 1 &&
         opacity.constantOr(0) === 1) ? 'opaque' : 'translucent';
 
@@ -83,7 +83,7 @@ function drawFillTile(painter, sourceCache, layer, tile, coord, bucket, firstTil
     const gl = painter.context.gl;
     const programConfiguration = bucket.programConfigurations.get(layer.id);
     const pattern = layer.paint.get('fill-pattern');
-    const program = setFillProgram('fill', !!(pattern && pattern.property.getPossibleOutputs().length), painter, programConfiguration, layer, tile, coord, firstTile);
+    const program = setFillProgram('fill', !!(pattern && pattern.constantOr((1: any))), painter, programConfiguration, layer, tile, coord, firstTile);
     program.draw(
         painter.context,
         gl.TRIANGLES,
@@ -97,10 +97,9 @@ function drawFillTile(painter, sourceCache, layer, tile, coord, bucket, firstTil
 function drawStrokeTile(painter, sourceCache, layer, tile, coord, bucket, firstTile) {
     const gl = painter.context.gl;
     const programConfiguration = bucket.programConfigurations.get(layer.id);
-    const patternProperty = layer.paint.get('fill-pattern');
-    const pattern = layer.getPaintProperty('fill-outline-color') ? false : !!(patternProperty && patternProperty.property.getPossibleOutputs().length);
-
-    const program = setFillProgram('fillOutline', pattern, painter, programConfiguration, layer, tile, coord, firstTile);
+    const patternProperty = layer.paint.get('fill-pattern')
+    const pattern = layer.getPaintProperty('fill-outline-color') ? null : patternProperty && patternProperty.constantOr((1: any));
+    const program = setFillProgram('fillOutline', !!pattern, painter, programConfiguration, layer, tile, coord, firstTile);
     gl.uniform2f(program.uniforms.u_world, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
     program.draw(

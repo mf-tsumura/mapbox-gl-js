@@ -25,7 +25,7 @@ export default function drawLine(painter: Painter, sourceCache: SourceCache, lay
     const linePattern = layer.paint.get('line-pattern');
     const programId =
         layer.paint.get('line-dasharray') ? 'lineSDF' :
-        linePattern && linePattern.property.getPossibleOutputs().length ? 'linePattern' :
+        linePattern && !(linePattern.value.kind === "constant" && linePattern.value.value === undefined) ? 'linePattern' :
         layer.paint.get('line-gradient') ? 'lineGradient' : 'line';
 
     let prevTileZoom;
