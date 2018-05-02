@@ -154,7 +154,7 @@ class LineBucket implements Bucket {
         }
 
         for (const {feature, index, sourceLayerIndex} of features) {
-            if (!this.layers[0]._featureFilter({zoom: this.zoom}, feature)) continue;
+            if (!this.layers[0]._featureFilter(new EvaluationParameters(this.zoom), feature)) continue;
             for (let i = 0; i < dataDrivenPatternLayers.length; i++) {
                 const layer = dataDrivenPatternLayers[i];
                 const linePattern = layer.paint.get('line-pattern');
@@ -184,15 +184,15 @@ class LineBucket implements Bucket {
         }
     }
 
-    update(states: FeatureStates, vtLayer: VectorTileLayer) {
+    update(states: FeatureStates, vtLayer: VectorTileLayer, imagePositions: {[string]: ImagePosition}) {
         if (!this.stateDependentLayers.length) return;
-        this.programConfigurations.updatePaintArrays(states, vtLayer, this.stateDependentLayers);
+        this.programConfigurations.updatePaintArrays(states, vtLayer, this.stateDependentLayers, imagePositions);
     }
 
     addFeatures(options: PopulateParameters, imagePositions: {[string]: ImagePosition}) {
         for (const feature of this.features) {
             const {geometry} = feature;
-            this.addFeature(feature, geometry, imagePositions);
+            this.addFeature(feature, geometry, feature.index, imagePositions);
         }
     }
 

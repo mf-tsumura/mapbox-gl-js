@@ -97,7 +97,7 @@ function drawFillTile(painter, sourceCache, layer, tile, coord, bucket, firstTil
 function drawStrokeTile(painter, sourceCache, layer, tile, coord, bucket, firstTile) {
     const gl = painter.context.gl;
     const programConfiguration = bucket.programConfigurations.get(layer.id);
-    const patternProperty = layer.paint.get('fill-pattern')
+    const patternProperty = layer.paint.get('fill-pattern');
     const pattern = layer.getPaintProperty('fill-outline-color') ? null : patternProperty && patternProperty.constantOr((1: any));
     const program = setFillProgram('fillOutline', !!pattern, painter, programConfiguration, layer, tile, coord, firstTile);
     gl.uniform2f(program.uniforms.u_world, gl.drawingBufferWidth, gl.drawingBufferHeight);

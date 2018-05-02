@@ -209,6 +209,18 @@ class StructArrayLayout8ui16 extends StructArray {
         return i;
     }
 
+    emplace(i: number, v0: number, v1: number, v2: number, v3: number, v4: number, v5: number, v6: number, v7: number) {
+        const o2 = i * 8;
+        this.uint16[o2 + 0] = v0;
+        this.uint16[o2 + 1] = v1;
+        this.uint16[o2 + 2] = v2;
+        this.uint16[o2 + 3] = v3;
+        this.uint16[o2 + 4] = v4;
+        this.uint16[o2 + 5] = v5;
+        this.uint16[o2 + 6] = v6;
+        this.uint16[o2 + 7] = v7;
+        return i;
+    }
 }
 
 StructArrayLayout8ui16.prototype.bytesPerElement = 16;
@@ -806,7 +818,7 @@ class StructArrayLayout4f16 extends StructArray {
         this.float32[o4 + 3] = v3;
         return i;
     }
-    
+
     emplace(i: number, v0: number, v1: number, v2: number, v3: number) {
         const o4 = i * 4;
         this.float32[o4 + 0] = v0;

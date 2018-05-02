@@ -98,7 +98,7 @@ class FillBucket implements Bucket {
         }
 
         for (const {feature, index, sourceLayerIndex} of features) {
-            if (this.layers[0]._featureFilter(new EvaluationParameters(this.zoom), feature), feature)) {
+            if (this.layers[0]._featureFilter(new EvaluationParameters(this.zoom), feature)) {
                 for (let i = 0; i < dataDrivenPatternLayers.length; i++) {
                     const layer = dataDrivenPatternLayers[i];
                     const fillPattern = layer.paint.get('fill-pattern');
@@ -128,17 +128,16 @@ class FillBucket implements Bucket {
             }
         }
     }
-    
-    update(states: FeatureStates, vtLayer: VectorTileLayer) {
+
+    update(states: FeatureStates, vtLayer: VectorTileLayer, imagePositions: {[string]: ImagePosition}) {
         if (!this.stateDependentLayers.length) return;
-        this.programConfigurations.updatePaintArrays(states, vtLayer, this.stateDependentLayers);
+        this.programConfigurations.updatePaintArrays(states, vtLayer, this.stateDependentLayers, imagePositions);
     }
 
     addFeatures(options: PopulateParameters, imagePositions: {[string]: ImagePosition}) {
-        this.imagePositions = imagePositions;
         for (const feature of this.features) {
             const {geometry} = feature;
-            this.addFeature(feature, geometry);
+            this.addFeature(feature, geometry, feature.index, imagePositions);
         }
     }
 
@@ -169,7 +168,7 @@ class FillBucket implements Bucket {
         this.segments2.destroy();
     }
 
-    addFeature(feature: FillFeature, geometry: Array<Array<Point>>, index: number) {
+    addFeature(feature: FillFeature, geometry: Array<Array<Point>>, index: number, imagePositions: {[string]: ImagePosition}) {
         for (const polygon of classifyRings(geometry, EARCUT_MAX_RINGS)) {
             let numVertices = 0;
             for (const ring of polygon) {
@@ -223,10 +222,10 @@ class FillBucket implements Bucket {
             triangleSegment.vertexLength += numVertices;
             triangleSegment.primitiveLength += indices.length / 3;
         }
-        this.programConfigurations.populatePaintArrays(this.layoutVertexArray.length, feature, index, this.imagePositions);
+        this.programConfigurations.populatePaintArrays(this.layoutVertexArray.length, feature, index, imagePositions);
     }
 }
 
-register('FillBucket', FillBucket, {omit: ['layers']});
+register('FillBucket', FillBucket, {omit: ['layers', 'features']});
 
 export default FillBucket;

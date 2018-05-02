@@ -3,8 +3,6 @@
 import { uniqueId, deepEqual, parseCacheControl } from '../util/util';
 import { deserialize as deserializeBucket } from '../data/bucket';
 import FeatureIndex from '../data/feature_index';
-import vt from '@mapbox/vector-tile';
-import Protobuf from 'pbf';
 import GeoJSONFeature from '../util/vectortile_to_geojson';
 import featureFilter from '../style-spec/feature_filter';
 import SymbolBucket from '../data/bucket/symbol_bucket';
@@ -438,7 +436,7 @@ class Tile {
             const sourceLayerStates = states[sourceLayerId];
             if (!sourceLayer || !sourceLayerStates || Object.keys(sourceLayerStates).length === 0) continue;
 
-            bucket.update(sourceLayerStates, sourceLayer);
+            bucket.update(sourceLayerStates, sourceLayer, this.iconAtlas && this.iconAtlas.positions || {});
             if (painter && painter.style) {
                 this.queryPadding = Math.max(this.queryPadding, painter.style.getLayer(bucket.layerIds[0]).queryRadius(bucket));
             }

@@ -19,6 +19,7 @@ import { getSizeData } from '../../symbol/symbol_size';
 import { register } from '../../util/web_worker_transfer';
 import EvaluationParameters from '../../style/evaluation_parameters';
 
+
 import type {
     Bucket,
     BucketParameters,
@@ -34,6 +35,7 @@ import type VertexBuffer from '../../gl/vertex_buffer';
 import type {SymbolQuad} from '../../symbol/quads';
 import type {SizeData} from '../../symbol/symbol_size';
 import type {FeatureStates} from '../../source/source_state';
+import type {ImagePosition} from '../../render/image_atlas';
 
 export type SingleCollisionBox = {
     x1: number;
@@ -410,10 +412,10 @@ class SymbolBucket implements Bucket {
         }
     }
 
-    update(states: FeatureStates, vtLayer: VectorTileLayer) {
+    update(states: FeatureStates, vtLayer: VectorTileLayer, imagePositions: {[string]: ImagePosition}) {
         if (!this.stateDependentLayers.length) return;
-        this.text.programConfigurations.updatePaintArrays(states, vtLayer, this.layers);
-        this.icon.programConfigurations.updatePaintArrays(states, vtLayer, this.layers);
+        this.text.programConfigurations.updatePaintArrays(states, vtLayer, this.layers, imagePositions);
+        this.icon.programConfigurations.updatePaintArrays(states, vtLayer, this.layers, imagePositions);
     }
 
     isEmpty() {

@@ -75,7 +75,7 @@ interface Binder<T> {
     paintVertexArray?: StructArray;
 
     populatePaintArray(length: number, feature: Feature, imagePositions: {[string]: ImagePosition}): void;
-    updatePaintArray(start: number, length: number, feature: Feature, featureState: FeatureState): void;
+    updatePaintArray(start: number, length: number, feature: Feature, featureState: FeatureState, imagePositions: {[string]: ImagePosition}): void;
     upload(Context): void;
     destroy(): void;
 
@@ -153,6 +153,7 @@ class CrossFadedConstantBinder<T> implements Binder<T> {
     }
 
     populatePaintArray() {}
+    updatePaintArray() {}
     upload() {}
     destroy() {}
 
@@ -449,7 +450,6 @@ class CrossFadedCompositeBinder<T> implements Binder<T> {
         const min = this.expression.evaluate({zoom: this.zoom - 1}, feature);
         const mid = this.expression.evaluate({zoom: this.zoom }, feature);
         const max = this.expression.evaluate({zoom: this.zoom + 1}, feature);
-        // console.log( mid, Object.keys(imagePositions))
         if (imagePositions) {
             const imageMin = imagePositions[min];
             const imageMid = imagePositions[mid];
@@ -471,6 +471,38 @@ class CrossFadedCompositeBinder<T> implements Binder<T> {
         }
     }
 
+    updatePaintArray(start: number, end: number, feature: Feature, featureState: FeatureState, imagePositions: {[string]: ImagePosition}) {
+        // We populate two paint arrays because, for cross-faded properties, we don't know which direction
+        // we're cross-fading to at layout time. In order to keep vertex attributes to a minimum and not pass
+        // unnecessary vertex data to the shaders, we determine which to upload at draw time.
+
+        const zoomInArray = this.zoomInPaintVertexArray;
+        const zoomOutArray = this.zoomOutPaintVertexArray;
+
+        const min = this.expression.evaluate({zoom: this.zoom - 1}, feature, featureState);
+        const mid = this.expression.evaluate({zoom: this.zoom }, feature, featureState);
+        const max = this.expression.evaluate({zoom: this.zoom + 1}, feature, featureState);
+
+        if (imagePositions) {
+            const imageMin = imagePositions[min];
+            const imageMid = imagePositions[mid];
+            const imageMax = imagePositions[max];
+
+            if (!imageMin || !imageMid || !imageMax) return;
+            for (let i = start; i < end; i++) {
+                zoomInArray.emplace(i,
+                    imageMid.tl[0], imageMid.tl[1], imageMid.br[0], imageMid.br[1],
+                    imageMin.tl[0], imageMin.tl[1], imageMin.br[0], imageMin.br[1]
+                );
+
+                zoomOutArray.emplace(i,
+                    imageMid.tl[0], imageMid.tl[1], imageMid.br[0], imageMid.br[1],
+                    imageMax.tl[0], imageMax.tl[1], imageMax.br[0], imageMax.br[1]
+                );
+            }
+        }
+    }
+
     getVertexBuffer(crossfade: CrossfadeParameters) {
         if (this.zoomOutPaintVertexBuffer && this.zoomInPaintVertexBuffer) {
             return crossfade.fromScale === 2 ? this.zoomInPaintVertexBuffer : this.zoomOutPaintVertexBuffer;
@@ -479,8 +511,8 @@ class CrossFadedCompositeBinder<T> implements Binder<T> {
 
     upload(context: Context) {
         if (this.zoomInPaintVertexArray && this.zoomOutPaintVertexArray) {
-            this.zoomInPaintVertexBuffer = context.createVertexBuffer(this.zoomInPaintVertexArray, this.paintVertexAttributes);
-            this.zoomOutPaintVertexBuffer = context.createVertexBuffer(this.zoomOutPaintVertexArray, this.paintVertexAttributes);
+            this.zoomInPaintVertexBuffer = context.createVertexBuffer(this.zoomInPaintVertexArray, this.paintVertexAttributes, this.expression.isStateDependent);
+            this.zoomOutPaintVertexBuffer = context.createVertexBuffer(this.zoomOutPaintVertexArray, this.paintVertexAttributes, this.expression.isStateDependent);
         }
     }
 
@@ -624,7 +656,7 @@ export default class ProgramConfiguration {
         this._bufferOffset = newLength;
     }
 
-    updatePaintArrays(featureStates: FeatureStates, vtLayer: VectorTileLayer, layer: TypedStyleLayer): boolean {
+    updatePaintArrays(featureStates: FeatureStates, vtLayer: VectorTileLayer, layer: TypedStyleLayer, imagePositions: {[string]: ImagePosition}): boolean {
         let dirty: boolean = false;
         for (const id in featureStates) {
             const posArray = this._idMap[id];
@@ -636,12 +668,12 @@ export default class ProgramConfiguration {
 
                 for (const property in this.binders) {
                     const binder = this.binders[property];
-                    if (binder instanceof ConstantBinder) continue;
+                    if (binder instanceof ConstantBinder || binder instanceof CrossFadedConstantBinder) continue;
                     if ((binder: any).expression.isStateDependent === true) {
                         //AHM: Remove after https://github.com/mapbox/mapbox-gl-js/issues/6255
                         const value = layer.paint.get(property);
                         (binder: any).expression = value.value;
-                        binder.updatePaintArray(pos.start, pos.end, feature, featureState);
+                        binder.updatePaintArray(pos.start, pos.end, feature, featureState, imagePositions);
                         dirty = true;
                     }
                 }
@@ -704,8 +736,7 @@ export default class ProgramConfiguration {
         for (const property in this.binders) {
             const binder = this.binders[property];
             if ((binder instanceof SourceExpressionBinder ||
-                binder instanceof CompositeExpressionBinder ||
-                binder instanceof PatternCompositeExpressionBinder) &&
+                binder instanceof CompositeExpressionBinder) &&
                 binder.paintVertexBuffer
             ) {
                 buffers.push(binder.paintVertexBuffer);
@@ -741,9 +772,9 @@ export class ProgramConfigurationSet<Layer: TypedStyleLayer> {
         this.needsUpload = true;
     }
 
-    updatePaintArrays(featureStates: FeatureStates, vtLayer: VectorTileLayer, layers: $ReadOnlyArray<TypedStyleLayer>) {
+    updatePaintArrays(featureStates: FeatureStates, vtLayer: VectorTileLayer, layers: $ReadOnlyArray<TypedStyleLayer>, imagePositions: {[string]: ImagePosition}) {
         for (const layer of layers) {
-            this.needsUpload = this.programConfigurations[layer.id].updatePaintArrays(featureStates, vtLayer, layer) || this.needsUpload;
+            this.needsUpload = this.programConfigurations[layer.id].updatePaintArrays(featureStates, vtLayer, layer, imagePositions) || this.needsUpload;
         }
     }
 
