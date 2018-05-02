@@ -566,6 +566,10 @@ export class DataDrivenProperty<T> implements Property<T, PossiblyEvaluatedPrope
         }
     }
 
+    getPossibleOutputs() {
+        return [];
+    }
+
     evaluate(value: PossiblyEvaluatedValue<T>, parameters: EvaluationParameters, feature: Feature): T {
         if (value.kind === 'constant') {
             return value.value;
@@ -584,6 +588,7 @@ export class DataDrivenProperty<T> implements Property<T, PossiblyEvaluatedPrope
 
 export class CrossFadedDataDrivenProperty<T> extends DataDrivenProperty<?CrossFaded<T>> {
     binder: string;
+    possibleOutputs: Array<string>;
 
     constructor(specification: StylePropertySpecification) {
         super(specification);
@@ -591,6 +596,7 @@ export class CrossFadedDataDrivenProperty<T> extends DataDrivenProperty<?CrossFa
     }
 
     possiblyEvaluate(value: PropertyValue<?CrossFaded<T>, PossiblyEvaluatedPropertyValue<?CrossFaded<T>>>, parameters: EvaluationParameters): PossiblyEvaluatedPropertyValue<?CrossFaded<T>> {
+        this.possibleOutputs = value.expression && value.expression.kind !== "constant" ? (value.expression: any)._styleExpression.expression.possibleOutputs() : [];
         if (value.value === undefined) {
             return new PossiblyEvaluatedPropertyValue(this, {kind: 'constant', value: undefined}, parameters);
         } else if (value.expression.kind === 'constant') {
@@ -607,6 +613,10 @@ export class CrossFadedDataDrivenProperty<T> extends DataDrivenProperty<?CrossFa
             // source or composite expression
             return new PossiblyEvaluatedPropertyValue(this, value.expression, parameters);
         }
+    }
+
+    getPossibleOutputs() {
+        return this.possibleOutputs;
     }
 
     evaluate(value: PossiblyEvaluatedValue<?CrossFaded<T>>, globals: EvaluationParameters, feature: Feature): ?CrossFaded<T> {

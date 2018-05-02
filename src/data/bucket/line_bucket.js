@@ -138,11 +138,13 @@ class LineBucket implements Bucket {
         const icons = options.iconDependencies;
         this.features = [];
 
-        const dataDrivenPatternLayers = [];
         for (const layer of this.layers) {
             const linePattern = layer.paint.get('line-pattern');
             if (linePattern.value.kind === "source" || linePattern.value.kind === "composite") {
-                dataDrivenPatternLayers.push(layer);
+                const images = linePattern.property.getPossibleOutputs();
+                for (const image of images) {
+                    icons[image] = true;
+                }
             } else {
                 const image = linePattern.constantOr(null);
                 if (image) {
@@ -155,16 +157,6 @@ class LineBucket implements Bucket {
 
         for (const {feature, index, sourceLayerIndex} of features) {
             if (!this.layers[0]._featureFilter(new EvaluationParameters(this.zoom), feature)) continue;
-            for (let i = 0; i < dataDrivenPatternLayers.length; i++) {
-                const layer = dataDrivenPatternLayers[i];
-                const linePattern = layer.paint.get('line-pattern');
-                const image = linePattern.evaluate(feature);
-                if (image) {
-                    icons[image.min] = true;
-                    icons[image.mid] = true;
-                    icons[image.max] = true;
-                }
-            }
 
             const geometry = loadGeometry(feature);
             const lineFeature: LineFeature = {

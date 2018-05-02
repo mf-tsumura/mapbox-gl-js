@@ -81,12 +81,14 @@ class FillBucket implements Bucket {
         const icons = options.iconDependencies;
         this.features = [];
 
-        const dataDrivenPatternLayers = [];
         for (let i = 0; i < this.layers.length; i++) {
             const layer = this.layers[i];
             const fillPattern = layer.paint.get('fill-pattern');
             if (fillPattern.value.kind === "source" || fillPattern.value.kind === "composite") {
-                dataDrivenPatternLayers.push(layer);
+                const images = fillPattern.property.getPossibleOutputs();
+                for (const image of images) {
+                    icons[image] = true;
+                }
             } else {
                 const image = fillPattern.constantOr(null);
                 if (image) {
@@ -99,16 +101,6 @@ class FillBucket implements Bucket {
 
         for (const {feature, index, sourceLayerIndex} of features) {
             if (this.layers[0]._featureFilter(new EvaluationParameters(this.zoom), feature)) {
-                for (let i = 0; i < dataDrivenPatternLayers.length; i++) {
-                    const layer = dataDrivenPatternLayers[i];
-                    const fillPattern = layer.paint.get('fill-pattern');
-                    const image = fillPattern.evaluate(feature);
-                    if (image) {
-                        icons[image.min] = true;
-                        icons[image.mid] = true;
-                        icons[image.max] = true;
-                    }
-                }
 
                 const geometry = loadGeometry(feature);
                 const fillFeature: FillFeature = {
