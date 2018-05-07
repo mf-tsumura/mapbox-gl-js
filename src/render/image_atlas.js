@@ -71,15 +71,17 @@ export default class ImageAtlas {
                 height: pack.h
             });
 
-            RGBAImage.copy(
-                src.data,
-                image,
-                { x: 0, y: 0 },
-                {
-                    x: bin.x + padding,
-                    y: bin.y + padding
-                },
-                src.data);
+            const x = bin.x + padding,
+                  y = bin.y + padding,
+                  w = src.data.width,
+                  h = src.data.height;
+
+            RGBAImage.copy(src.data, image, { x: 0, y: 0 }, { x, y }, { width: w, height: h });
+            // Add 1 pixel wrapped padding on each side of the image.
+            RGBAImage.copy(src.data, image, { x: 0, y: h - 1 }, { x: x, y: y - 1 }, { width: w, height: 1 }); // T
+            RGBAImage.copy(src.data, image, { x: 0, y:     0 }, { x: x, y: y + h }, { width: w, height: 1 }); // B
+            RGBAImage.copy(src.data, image, { x: w - 1, y: 0 }, { x: x - 1, y: y }, { width: 1, height: h }); // L
+            RGBAImage.copy(src.data, image, { x: 0,     y: 0 }, { x: x + w, y: y }, { width: 1, height: h }); // R
 
             positions[id] = new ImagePosition(bin, src);
         }
