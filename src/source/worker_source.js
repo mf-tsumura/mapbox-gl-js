@@ -34,7 +34,7 @@ export type WorkerDEMTileParameters = TileParameters & {
 
 export type WorkerTileResult = {
     buckets: Array<Bucket>,
-    iconAtlas: ImageAtlas,
+    imageAtlas: ImageAtlas,
     glyphAtlasImage: AlphaImage,
     featureIndex: FeatureIndex,
     collisionBoxArray: CollisionBoxArray,

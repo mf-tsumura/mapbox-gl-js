@@ -34,13 +34,13 @@ export default function drawLine(painter: Painter, sourceCache: SourceCache, lay
         const tile = sourceCache.getTile(coord);
 
         const pattern = linePattern.constantOr((1: any));
-        if (pattern && !tile.iconAtlas) continue;
-        if (pattern && tile.iconAtlas) {
+        if (pattern && !tile.imageAtlas) continue;
+        if (pattern && tile.imageAtlas) {
             // pattern is set, but the icon atlas hasn't been populated yet
-            if (!Object.keys(tile.iconAtlas.patternPositions).length) continue;
+            if (!Object.keys(tile.imageAtlas.patternPositions).length) continue;
             if (pattern.to && pattern.from) {
-                const imagePosFrom = tile.iconAtlas.patternPositions[pattern.from],
-                    imagePosTo = tile.iconAtlas.patternPositions[pattern.to];
+                const imagePosFrom = tile.imageAtlas.patternPositions[pattern.from],
+                    imagePosTo = tile.imageAtlas.patternPositions[pattern.to];
                 if (!imagePosFrom || !imagePosTo) continue;
             }
         }

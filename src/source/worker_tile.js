@@ -192,7 +192,7 @@ class WorkerTile {
                     featureIndex,
                     collisionBoxArray: this.collisionBoxArray,
                     glyphAtlasImage: glyphAtlas.image,
-                    iconAtlas: imageAtlas
+                    imageAtlas: imageAtlas
                 });
             }
         }

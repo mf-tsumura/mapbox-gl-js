@@ -166,9 +166,9 @@ class CrossFadedConstantBinder<T> implements Binder<T> {
         const image: any = currentValue.constantOr(this.value);
         const gl = context.gl;
 
-        if (image && tile && tile.iconAtlas) {
-            const imagePosFrom = tile.iconAtlas.patternPositions[image.from],
-                imagePosTo = tile.iconAtlas.patternPositions[image.to];
+        if (image && tile && tile.imageAtlas) {
+            const imagePosFrom = tile.imageAtlas.patternPositions[image.from],
+                imagePosTo = tile.imageAtlas.patternPositions[image.to];
             if (!imagePosFrom || !imagePosTo) return;
 
             gl.uniform4fv(program.uniforms.u_pattern_from, (imagePosFrom: any).tl.concat((imagePosFrom: any).br));
@@ -190,8 +190,8 @@ class CrossFadedConstantBinder<T> implements Binder<T> {
             gl.uniform1f(program.uniforms.u_fade, image.t);
             gl.uniform1i(program.uniforms.u_image, 0);
             context.activeTexture.set(gl.TEXTURE0);
-            tile.iconAtlasTexture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE);
-            gl.uniform2fv(program.uniforms.u_texsize, tile.iconAtlasTexture.size);
+            tile.imageAtlasTexture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE);
+            gl.uniform2fv(program.uniforms.u_texsize, tile.imageAtlasTexture.size);
         }
     }
 
@@ -534,7 +534,7 @@ class CrossFadedCompositeBinder<T> implements Binder<T> {
             const gl = context.gl;
             gl.uniform1f(program.uniforms.u_fade, crossfade.t);
             const tileRatio = 1 / pixelsToTileUnits(tile, 1, tileZoom);
-            // find a better way to determine pixel ratio of tile iconAtlas images
+            // find a better way to determine pixel ratio of tile imageAtlas images
             gl.uniform4f(program.uniforms.u_scale, browser.devicePixelRatio > 1 ? 2 : 1, tileRatio, crossfade.fromScale, crossfade.toScale);
 
             const numTiles = Math.pow(2, tile.tileID.overscaledZ);
@@ -547,8 +547,8 @@ class CrossFadedCompositeBinder<T> implements Binder<T> {
 
             gl.uniform1i(program.uniforms.u_image, 0);
             context.activeTexture.set(gl.TEXTURE0);
-            tile.iconAtlasTexture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE);
-            gl.uniform2fv(program.uniforms.u_texsize, tile.iconAtlasTexture.size);
+            tile.imageAtlasTexture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE);
+            gl.uniform2fv(program.uniforms.u_texsize, tile.imageAtlasTexture.size);
         }
     }
 

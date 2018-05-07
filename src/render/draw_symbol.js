@@ -104,9 +104,9 @@ function drawLayerSymbols(painter, sourceCache, layer, coords, isText, translate
             const iconScaled = layer.layout.get('icon-size').constantOr(0) !== 1 || bucket.iconsNeedLinear;
             const iconTransformed = pitchWithMap || tr.pitch !== 0;
 
-            tile.iconAtlasTexture.bind(isSDF || painter.options.rotating || painter.options.zooming || iconScaled || iconTransformed ?
+            tile.imageAtlasTexture.bind(isSDF || painter.options.rotating || painter.options.zooming || iconScaled || iconTransformed ?
                 gl.LINEAR : gl.NEAREST, gl.CLAMP_TO_EDGE);
-            gl.uniform2fv(program.uniforms.u_texsize, tile.iconAtlasTexture.size);
+            gl.uniform2fv(program.uniforms.u_texsize, tile.imageAtlasTexture.size);
         }
 
         gl.uniformMatrix4fv(program.uniforms.u_matrix, false, painter.translatePosMatrix(coord.posMatrix, tile, translate, translateAnchor));

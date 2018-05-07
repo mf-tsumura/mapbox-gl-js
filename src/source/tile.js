@@ -58,8 +58,8 @@ class Tile {
     buckets: {[string]: Bucket};
     latestFeatureIndex: ?FeatureIndex;
     latestRawTileData: ?ArrayBuffer;
-    iconAtlas: ?ImageAtlas;
-    iconAtlasTexture: Texture;
+    imageAtlas: ?ImageAtlas;
+    imageAtlasTexture: Texture;
     glyphAtlasImage: ?AlphaImage;
     glyphAtlasTexture: Texture;
     expirationTime: any;
@@ -179,8 +179,8 @@ class Tile {
             this.queryPadding = Math.max(this.queryPadding, painter.style.getLayer(bucket.layerIds[0]).queryRadius(bucket));
         }
 
-        if (data.iconAtlas) {
-            this.iconAtlas = data.iconAtlas;
+        if (data.imageAtlas) {
+            this.imageAtlas = data.imageAtlas;
         }
         if (data.glyphAtlasImage) {
             this.glyphAtlasImage = data.glyphAtlasImage;
@@ -198,12 +198,12 @@ class Tile {
         }
         this.buckets = {};
 
-        if (this.iconAtlasTexture) {
-            this.iconAtlasTexture.destroy();
+        if (this.imageAtlasTexture) {
+            this.imageAtlasTexture.destroy();
         }
 
-        if (this.iconAtlas) {
-            this.iconAtlas = null;
+        if (this.imageAtlas) {
+            this.imageAtlas = null;
         }
 
         if (this.glyphAtlasTexture) {
@@ -233,9 +233,9 @@ class Tile {
         }
 
         const gl = context.gl;
-        if (this.iconAtlas && !this.iconAtlas.uploaded) {
-            this.iconAtlasTexture = new Texture(context, this.iconAtlas.image, gl.RGBA);
-            this.iconAtlas.uploaded = true;
+        if (this.imageAtlas && !this.imageAtlas.uploaded) {
+            this.imageAtlasTexture = new Texture(context, this.imageAtlas.image, gl.RGBA);
+            this.imageAtlas.uploaded = true;
         }
 
         if (this.glyphAtlasImage) {
@@ -436,7 +436,7 @@ class Tile {
             const sourceLayerStates = states[sourceLayerId];
             if (!sourceLayer || !sourceLayerStates || Object.keys(sourceLayerStates).length === 0) continue;
 
-            bucket.update(sourceLayerStates, sourceLayer, this.iconAtlas && this.iconAtlas.patternPositions || {});
+            bucket.update(sourceLayerStates, sourceLayer, this.imageAtlas && this.imageAtlas.patternPositions || {});
             if (painter && painter.style) {
                 this.queryPadding = Math.max(this.queryPadding, painter.style.getLayer(bucket.layerIds[0]).queryRadius(bucket));
             }

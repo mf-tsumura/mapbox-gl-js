@@ -754,7 +754,7 @@ class Style extends Evented {
 
         if (deepEqual(layer.getPaintProperty(name), value)) return;
 
-        // if a cross-faded value is changed, we need to make sure the new icons get added to each tile's iconAtlas
+        // if a cross-faded value is changed, we need to make sure the new icons get added to each tile's imageAtlas
         // so a call to _updateLayer is necessary
 
         const prop = layer.paint && layer.paint.get(name);
