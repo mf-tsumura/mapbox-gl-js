@@ -436,7 +436,7 @@ class Tile {
             const sourceLayerStates = states[sourceLayerId];
             if (!sourceLayer || !sourceLayerStates || Object.keys(sourceLayerStates).length === 0) continue;
 
-            bucket.update(sourceLayerStates, sourceLayer, this.iconAtlas && this.iconAtlas.positions || {});
+            bucket.update(sourceLayerStates, sourceLayer, this.iconAtlas && this.iconAtlas.patternPositions || {});
             if (painter && painter.style) {
                 this.queryPadding = Math.max(this.queryPadding, painter.style.getLayer(bucket.layerIds[0]).queryRadius(bucket));
             }

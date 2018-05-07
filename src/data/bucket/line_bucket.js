@@ -135,7 +135,7 @@ class LineBucket implements Bucket {
     }
 
     populate(features: Array<IndexedFeature>, options: PopulateParameters) {
-        const icons = options.iconDependencies;
+        const patterns = options.patternDependencies;
         this.features = [];
 
         for (const layer of this.layers) {
@@ -143,14 +143,14 @@ class LineBucket implements Bucket {
             if (linePattern.value.kind === "source" || linePattern.value.kind === "composite") {
                 const images = linePattern.property.getPossibleOutputs();
                 for (const image of images) {
-                    icons[image] = true;
+                    patterns[image] = true;
                 }
             } else {
                 const image = linePattern.constantOr(null);
                 if (image) {
-                    icons[image.min] = true;
-                    icons[image.mid] = true;
-                    icons[image.max] = true;
+                    patterns[image.min] = true;
+                    patterns[image.mid] = true;
+                    patterns[image.max] = true;
                 }
             }
         }

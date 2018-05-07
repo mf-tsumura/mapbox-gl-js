@@ -61,10 +61,10 @@ function drawFillTiles(painter, sourceCache, layer, coords, drawFn) {
         if (pattern && !tile.iconAtlas) continue;
         if (pattern && tile.iconAtlas) {
             // pattern is set, but the icon atlas hasn't been populated yet
-            if (!Object.keys(tile.iconAtlas.positions).length) continue;
+            if (!Object.keys(tile.iconAtlas.patternPositions).length) continue;
             if (pattern.to && pattern.from) {
-                const imagePosFrom = tile.iconAtlas.positions[pattern.from],
-                    imagePosTo = tile.iconAtlas.positions[pattern.to];
+                const imagePosFrom = tile.iconAtlas.patternPositions[pattern.from],
+                    imagePosTo = tile.iconAtlas.patternPositions[pattern.to];
                 if (!imagePosFrom || !imagePosTo) continue;
             }
 

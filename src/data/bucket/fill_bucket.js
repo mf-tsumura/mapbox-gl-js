@@ -78,7 +78,7 @@ class FillBucket implements Bucket {
     }
 
     populate(features: Array<IndexedFeature>, options: PopulateParameters) {
-        const icons = options.iconDependencies;
+        const patterns = options.patternDependencies;
         this.features = [];
 
         for (let i = 0; i < this.layers.length; i++) {
@@ -87,14 +87,14 @@ class FillBucket implements Bucket {
             if (fillPattern.value.kind === "source" || fillPattern.value.kind === "composite") {
                 const images = fillPattern.property.getPossibleOutputs();
                 for (const image of images) {
-                    icons[image] = true;
+                    patterns[image] = true;
                 }
             } else {
                 const image = fillPattern.constantOr(null);
                 if (image) {
-                    icons[image.min] = true;
-                    icons[image.mid] = true;
-                    icons[image.max] = true;
+                    patterns[image.min] = true;
+                    patterns[image.mid] = true;
+                    patterns[image.max] = true;
                 }
             }
         }

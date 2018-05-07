@@ -21,6 +21,7 @@ export type BucketParameters<Layer: TypedStyleLayer> = {
 export type PopulateParameters = {
     featureIndex: FeatureIndex,
     iconDependencies: {},
+    patternDependencies: {},
     glyphDependencies: {}
 }
 

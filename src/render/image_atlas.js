@@ -50,40 +50,26 @@ export class ImagePosition {
 
 export default class ImageAtlas {
     image: RGBAImage;
-    positions: {[string]: ImagePosition};
+    iconPositions: {[string]: ImagePosition};
+    patternPositions: {[string]: ImagePosition};
     uploaded: ?boolean;
 
-    constructor(images: {[string]: StyleImage}) {
+    constructor(icons: {[string]: StyleImage}, patterns: {[string]: StyleImage}) {
         const image = new RGBAImage({width: 0, height: 0});
-        const positions = {};
+        const iconPositions = {}, patternPositions = {};
 
         const pack = new ShelfPack(0, 0, {autoResize: true});
 
-        for (const id in images) {
-            const src = images[id];
+        for (const id in icons) {
+            const icon = icons[id];
+            const bin = this._packSprite(pack, icon, image, false);
+            iconPositions[id] = new ImagePosition(bin, icon);
+        }
 
-            const bin = pack.packOne(
-                src.data.width + 2 * padding,
-                src.data.height + 2 * padding);
-
-            image.resize({
-                width: pack.w,
-                height: pack.h
-            });
-
-            const x = bin.x + padding,
-                  y = bin.y + padding,
-                  w = src.data.width,
-                  h = src.data.height;
-
-            RGBAImage.copy(src.data, image, { x: 0, y: 0 }, { x, y }, { width: w, height: h });
-            // Add 1 pixel wrapped padding on each side of the image.
-            RGBAImage.copy(src.data, image, { x: 0, y: h - 1 }, { x: x, y: y - 1 }, { width: w, height: 1 }); // T
-            RGBAImage.copy(src.data, image, { x: 0, y:     0 }, { x: x, y: y + h }, { width: w, height: 1 }); // B
-            RGBAImage.copy(src.data, image, { x: w - 1, y: 0 }, { x: x - 1, y: y }, { width: 1, height: h }); // L
-            RGBAImage.copy(src.data, image, { x: 0,     y: 0 }, { x: x + w, y: y }, { width: 1, height: h }); // R
-
-            positions[id] = new ImagePosition(bin, src);
+        for (const id in patterns) {
+            const pattern = patterns[id];
+            const bin = this._packSprite(pack, pattern, image, true);
+            patternPositions[id] = new ImagePosition(bin, pattern);
         }
 
         pack.shrink();
@@ -93,7 +79,34 @@ export default class ImageAtlas {
         });
 
         this.image = image;
-        this.positions = positions;
+        this.iconPositions = iconPositions;
+        this.patternPositions = patternPositions;
+    }
+
+    _packSprite(pack: ShelfPack, sprite: StyleImage, image: RGBAImage, pattern: boolean) {
+        const bin = pack.packOne(
+            sprite.data.width + 2 * padding,
+            sprite.data.height + 2 * padding);
+
+        image.resize({
+            width: pack.w,
+            height: pack.h
+        });
+
+        const x = bin.x + padding,
+            y = bin.y + padding,
+            w = sprite.data.width,
+            h = sprite.data.height;
+
+        RGBAImage.copy(sprite.data, image, { x: 0, y: 0 }, { x, y }, { width: w, height: h });
+        if (pattern) {
+            // Add 1 pixel wrapped padding on each side of the pattern.
+            RGBAImage.copy(sprite.data, image, { x: 0, y: h - 1 }, { x: x, y: y - 1 }, { width: w, height: 1 }); // T
+            RGBAImage.copy(sprite.data, image, { x: 0, y:     0 }, { x: x, y: y + h }, { width: w, height: 1 }); // B
+            RGBAImage.copy(sprite.data, image, { x: w - 1, y: 0 }, { x: x - 1, y: y }, { width: 1, height: h }); // L
+            RGBAImage.copy(sprite.data, image, { x: 0,     y: 0 }, { x: x + w, y: y }, { width: 1, height: h }); // R
+        }
+        return bin;
     }
 }
 

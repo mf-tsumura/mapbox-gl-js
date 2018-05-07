@@ -72,6 +72,7 @@ class WorkerTile {
         const options = {
             featureIndex: featureIndex,
             iconDependencies: {},
+            patternDependencies: {},
             glyphDependencies: {}
         };
 
@@ -121,7 +122,8 @@ class WorkerTile {
 
         let error: ?Error;
         let glyphMap: ?{[string]: {[number]: ?StyleGlyph}};
-        let imageMap: ?{[string]: StyleImage};
+        let iconMap: ?{[string]: StyleImage};
+        let patternMap: ?{[string]: StyleImage};
 
         const stacks = mapObject(options.glyphDependencies, (glyphs) => Object.keys(glyphs).map(Number));
         if (Object.keys(stacks).length) {
@@ -141,31 +143,45 @@ class WorkerTile {
             actor.send('getImages', {icons}, (err, result) => {
                 if (!error) {
                     error = err;
-                    imageMap = result;
+                    iconMap = result;
                     maybePrepare.call(this);
                 }
             });
         } else {
-            imageMap = {};
+            iconMap = {};
         }
+
+        const patterns = Object.keys(options.patternDependencies);
+        if (patterns.length) {
+            actor.send('getImages', {icons: patterns}, (err, result) => {
+                if (!error) {
+                    error = err;
+                    patternMap = result;
+                    maybePrepare.call(this);
+                }
+            });
+        } else {
+            patternMap = {};
+        }
+
 
         maybePrepare.call(this);
 
         function maybePrepare() {
             if (error) {
                 return callback(error);
-            } else if (glyphMap && imageMap) {
+            } else if (glyphMap && iconMap && patternMap) {
                 const glyphAtlas = new GlyphAtlas(glyphMap);
-                const imageAtlas = new ImageAtlas(imageMap);
+                const imageAtlas = new ImageAtlas(iconMap, patternMap);
 
                 for (const key in buckets) {
                     const bucket = buckets[key];
                     if (bucket instanceof SymbolBucket) {
                         recalculateLayers(bucket.layers, this.zoom);
-                        performSymbolLayout(bucket, glyphMap, glyphAtlas.positions, imageMap, imageAtlas.positions, this.showCollisionBoxes);
+                        performSymbolLayout(bucket, glyphMap, glyphAtlas.positions, iconMap, imageAtlas.iconPositions, this.showCollisionBoxes);
                     } else if (bucket instanceof LineBucket || bucket instanceof FillBucket) {
                         recalculateLayers(bucket.layers, this.zoom);
-                        bucket.addFeatures(options, imageAtlas.positions);
+                        bucket.addFeatures(options, imageAtlas.patternPositions);
                     }
                 }
 
