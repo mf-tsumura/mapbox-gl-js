@@ -31,6 +31,15 @@ export type IndexedFeature = {
     sourceLayerIndex: number,
 }
 
+export type BucketFeature = {|
+    index: number,
+    sourceLayerIndex: number,
+    geometry: Array<Array<Point>>,
+    properties: Object,
+    type: 1 | 2 | 3,
+    id?: any
+|};
+
 /**
  * The `Bucket` interface is the single point of knowledge about turning vector
  * tiles into WebGL buffers.

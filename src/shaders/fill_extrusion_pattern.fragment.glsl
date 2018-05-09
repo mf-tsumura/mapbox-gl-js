@@ -1,9 +1,5 @@
-uniform vec2 u_pattern_tl_a;
-uniform vec2 u_pattern_br_a;
-uniform vec2 u_pattern_tl_b;
-uniform vec2 u_pattern_br_b;
 uniform vec2 u_texsize;
-uniform float u_mix;
+uniform float u_fade;
 
 uniform sampler2D u_image;
 
@@ -13,10 +9,19 @@ varying vec4 v_lighting;
 
 #pragma mapbox: define lowp float base
 #pragma mapbox: define lowp float height
+#pragma mapbox: define mediump vec4 pattern_from
+#pragma mapbox: define mediump vec4 pattern_to
 
 void main() {
     #pragma mapbox: initialize lowp float base
     #pragma mapbox: initialize lowp float height
+    #pragma mapbox: initialize mediump vec4 pattern_from
+    #pragma mapbox: initialize mediump vec4 pattern_to
+
+    vec2 u_pattern_tl_a = pattern_from.xy;
+    vec2 u_pattern_br_a = pattern_from.zw;
+    vec2 u_pattern_tl_b = pattern_to.xy;
+    vec2 u_pattern_br_b = pattern_to.zw;
 
     vec2 imagecoord = mod(v_pos_a, 1.0);
     vec2 pos = mix(u_pattern_tl_a / u_texsize, u_pattern_br_a / u_texsize, imagecoord);
@@ -26,7 +31,7 @@ void main() {
     vec2 pos2 = mix(u_pattern_tl_b / u_texsize, u_pattern_br_b / u_texsize, imagecoord_b);
     vec4 color2 = texture2D(u_image, pos2);
 
-    vec4 mixedColor = mix(color1, color2, u_mix);
+    vec4 mixedColor = mix(color1, color2, u_fade);
 
     gl_FragColor = mixedColor * v_lighting;
 

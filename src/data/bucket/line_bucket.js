@@ -16,6 +16,7 @@ import EvaluationParameters from '../../style/evaluation_parameters';
 import type {
     Bucket,
     BucketParameters,
+    BucketFeature,
     IndexedFeature,
     PopulateParameters
 } from '../bucket';
@@ -27,15 +28,6 @@ import type IndexBuffer from '../../gl/index_buffer';
 import type VertexBuffer from '../../gl/vertex_buffer';
 import type {FeatureStates} from '../../source/source_state';
 import type {ImagePosition} from '../../render/image_atlas';
-
-export type LineFeature = {|
-    index: number,
-    sourceLayerIndex: number,
-    geometry: Array<Array<Point>>,
-    properties: Object,
-    type: 1 | 2 | 3,
-    id?: any
-|};
 
 // NOTE ON EXTRUDE SCALE:
 // scale the extrusion vector so that the normal length is this value.
@@ -106,15 +98,13 @@ class LineBucket implements Bucket {
     layers: Array<LineStyleLayer>;
     layerIds: Array<string>;
     stateDependentLayers: Array<any>;
-    features: Array<LineFeature>;
+    features: Array<BucketFeature>;
 
     layoutVertexArray: LineLayoutArray;
     layoutVertexBuffer: VertexBuffer;
 
     indexArray: TriangleIndexArray;
     indexBuffer: IndexBuffer;
-
-    imagePositions: {[string]: ImagePosition};
 
     programConfigurations: ProgramConfigurationSet<LineStyleLayer>;
     segments: SegmentVector;
@@ -159,7 +149,7 @@ class LineBucket implements Bucket {
             if (!this.layers[0]._featureFilter(new EvaluationParameters(this.zoom), feature)) continue;
 
             const geometry = loadGeometry(feature);
-            const lineFeature: LineFeature = {
+            const lineFeature: BucketFeature = {
                 sourceLayerIndex: sourceLayerIndex,
                 index: index,
                 geometry: geometry,
@@ -213,7 +203,7 @@ class LineBucket implements Bucket {
         this.segments.destroy();
     }
 
-    addFeature(feature: LineFeature, geometry: Array<Array<Point>>, index: number, imagePositions: {[string]: ImagePosition}) {
+    addFeature(feature: BucketFeature, geometry: Array<Array<Point>>, index: number, imagePositions: {[string]: ImagePosition}) {
         const layout = this.layers[0].layout;
         const join = layout.get('line-join').evaluate(feature);
         const cap = layout.get('line-cap');
@@ -225,7 +215,7 @@ class LineBucket implements Bucket {
         }
     }
 
-    addLine(vertices: Array<Point>, feature: LineFeature, join: string, cap: string, miterLimit: number, roundLimit: number, index: number, imagePositions: {[string]: ImagePosition}) {
+    addLine(vertices: Array<Point>, feature: BucketFeature, join: string, cap: string, miterLimit: number, roundLimit: number, index: number, imagePositions: {[string]: ImagePosition}) {
         let lineDistances = null;
         if (!!feature.properties &&
             feature.properties.hasOwnProperty('mapbox_clip_start') &&

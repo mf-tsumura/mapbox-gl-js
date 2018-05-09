@@ -17,6 +17,7 @@ import EvaluationParameters from '../../style/evaluation_parameters';
 import type {
     Bucket,
     BucketParameters,
+    BucketFeature,
     IndexedFeature,
     PopulateParameters
 } from '../bucket';
@@ -27,16 +28,6 @@ import type VertexBuffer from '../../gl/vertex_buffer';
 import type Point from '@mapbox/point-geometry';
 import type {FeatureStates} from '../../source/source_state';
 import type {ImagePosition} from '../../render/image_atlas';
-
-
-export type FillFeature = {|
-    index: number,
-    sourceLayerIndex: number,
-    geometry: Array<Array<Point>>,
-    properties: Object,
-    type: 1 | 2 | 3,
-    id?: any
-|};
 
 class FillBucket implements Bucket {
     index: number;
@@ -59,8 +50,7 @@ class FillBucket implements Bucket {
     segments: SegmentVector;
     segments2: SegmentVector;
     uploaded: boolean;
-    features: Array<FillFeature>;
-    imagePositions: {[string]: ImagePosition};
+    features: Array<BucketFeature>;
 
     constructor(options: BucketParameters<FillStyleLayer>) {
         this.zoom = options.zoom;
@@ -103,7 +93,7 @@ class FillBucket implements Bucket {
             if (this.layers[0]._featureFilter(new EvaluationParameters(this.zoom), feature)) {
 
                 const geometry = loadGeometry(feature);
-                const fillFeature: FillFeature = {
+                const fillFeature: BucketFeature = {
                     sourceLayerIndex: sourceLayerIndex,
                     index: index,
                     geometry: geometry,
@@ -160,7 +150,7 @@ class FillBucket implements Bucket {
         this.segments2.destroy();
     }
 
-    addFeature(feature: FillFeature, geometry: Array<Array<Point>>, index: number, imagePositions: {[string]: ImagePosition}) {
+    addFeature(feature: BucketFeature, geometry: Array<Array<Point>>, index: number, imagePositions: {[string]: ImagePosition}) {
         for (const polygon of classifyRings(geometry, EARCUT_MAX_RINGS)) {
             let numVertices = 0;
             for (const ring of polygon) {

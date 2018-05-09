@@ -18,6 +18,7 @@ import EvaluationParameters from '../../style/evaluation_parameters';
 import type {
     Bucket,
     BucketParameters,
+    BucketFeature,
     IndexedFeature,
     PopulateParameters
 } from '../bucket';
@@ -64,6 +65,7 @@ class FillExtrusionBucket implements Bucket {
     programConfigurations: ProgramConfigurationSet<FillExtrusionStyleLayer>;
     segments: SegmentVector;
     uploaded: boolean;
+    features: Array<BucketFeature>;
 
     constructor(options: BucketParameters<FillExtrusionStyleLayer>) {
         this.zoom = options.zoom;
@@ -79,12 +81,52 @@ class FillExtrusionBucket implements Bucket {
     }
 
     populate(features: Array<IndexedFeature>, options: PopulateParameters) {
+        const patterns = options.patternDependencies;
+        this.features = [];
+
+        for (let i = 0; i < this.layers.length; i++) {
+            const layer = this.layers[i];
+            const fillExtrusionPattern = layer.paint.get('fill-extrusion-pattern');
+            if (fillExtrusionPattern.value.kind === "source" || fillExtrusionPattern.value.kind === "composite") {
+                const images = fillExtrusionPattern.property.getPossibleOutputs();
+                for (const image of images) {
+                    patterns[image] = true;
+                }
+            } else {
+                const image = fillExtrusionPattern.constantOr(null);
+                if (image) {
+                    patterns[image.min] = true;
+                    patterns[image.mid] = true;
+                    patterns[image.max] = true;
+                }
+            }
+        }
+
+
         for (const {feature, index, sourceLayerIndex} of features) {
             if (this.layers[0]._featureFilter(new EvaluationParameters(this.zoom), feature)) {
                 const geometry = loadGeometry(feature);
-                this.addFeature(feature, geometry, index);
+                const fillExtrusionFeature: BucketFeature = {
+                    sourceLayerIndex: sourceLayerIndex,
+                    index: index,
+                    geometry: geometry,
+                    properties: feature.properties,
+                    type: feature.type
+                };
+
+                if (typeof feature.id !== 'undefined') {
+                    fillExtrusionFeature.id = feature.id;
+                }
+                this.features.push(fillExtrusionFeature);
                 options.featureIndex.insert(feature, geometry, index, sourceLayerIndex, this.index);
             }
+        }
+    }
+
+    addFeatures(options: PopulateParameters, imagePositions: {[string]: ImagePosition}) {
+        for (const feature of this.features) {
+            const {geometry} = feature;
+            this.addFeature(feature, geometry, feature.index, imagePositions);
         }
     }
 
@@ -118,7 +160,7 @@ class FillExtrusionBucket implements Bucket {
         this.segments.destroy();
     }
 
-    addFeature(feature: VectorTileFeature, geometry: Array<Array<Point>>, index: number) {
+    addFeature(feature: BucketFeature, geometry: Array<Array<Point>>, index: number, imagePositions: {[string]: ImagePosition}) {
         for (const polygon of classifyRings(geometry, EARCUT_MAX_RINGS)) {
             let numVertices = 0;
             for (const ring of polygon) {
@@ -213,11 +255,11 @@ class FillExtrusionBucket implements Bucket {
             segment.vertexLength += numVertices;
         }
 
-        this.programConfigurations.populatePaintArrays(this.layoutVertexArray.length, feature, index, {});
+        this.programConfigurations.populatePaintArrays(this.layoutVertexArray.length, feature, index, imagePositions);
     }
 }
 
-register('FillExtrusionBucket', FillExtrusionBucket, {omit: ['layers']});
+register('FillExtrusionBucket', FillExtrusionBucket, {omit: ['layers', 'features']});
 
 export default FillExtrusionBucket;
 

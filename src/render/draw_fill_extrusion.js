@@ -1,12 +1,6 @@
 // @flow
 
 import glMatrix from '@mapbox/gl-matrix';
-
-import {
-    isPatternMissing,
-    setPatternUniforms,
-    prepare as preparePattern
-} from './pattern';
 import Texture from './texture';
 import Color from '../style-spec/util/color';
 import DepthMode from '../gl/depth_mode';
@@ -110,19 +104,37 @@ function drawExtrusion(painter, source, layer, tile, coord, bucket, first) {
     const context = painter.context;
     const gl = context.gl;
 
-    const image = layer.paint.get('fill-extrusion-pattern');
+    const patternProperty = layer.paint.get('fill-extrusion-pattern');
+    const pattern = patternProperty.constantOr((1: any));
+    if (pattern && !tile.imageAtlas) return;
+    if (pattern && tile.imageAtlas) {
+        // pattern is set, but the icon atlas hasn't been populated yet
+        if (!Object.keys(tile.imageAtlas.patternPositions).length) return;
+        if (pattern.to && pattern.from) {
+            const imagePosFrom = tile.imageAtlas.patternPositions[pattern.from],
+                imagePosTo = tile.imageAtlas.patternPositions[pattern.to];
+            if (!imagePosFrom || !imagePosTo) return;
+        }
+
+    }
 
     const prevProgram = painter.context.program.get();
     const programConfiguration = bucket.programConfigurations.get(layer.id);
-    const program = painter.useProgram(image ? 'fillExtrusionPattern' : 'fillExtrusion', programConfiguration);
+    const program = painter.useProgram(pattern ? 'fillExtrusionPattern' : 'fillExtrusion', programConfiguration);
     if (first || program.program !== prevProgram) {
         programConfiguration.setUniforms(context, program, layer.paint, {zoom: painter.transform.zoom});
     }
 
-    if (image) {
-        if (isPatternMissing(image, painter)) return;
-        preparePattern(image, painter, program);
-        setPatternUniforms(tile, painter, program);
+    if (pattern) {
+        const crossfade = layer.getCrossfadeParameters();
+        programConfiguration.updatePatternPaintBuffers(crossfade);
+        programConfiguration.setTileSpecificUniforms(painter.context,
+                                                     program,
+                                                     layer.paint,
+                                                     {zoom: painter.transform.zoom},
+                                                     painter.transform.tileZoom,
+                                                     tile,
+                                                     crossfade);
         gl.uniform1f(program.uniforms.u_height_factor, -Math.pow(2, coord.overscaledZ) / tile.tileSize / 8);
     }
 

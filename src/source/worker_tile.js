@@ -8,6 +8,7 @@ import DictionaryCoder from '../util/dictionary_coder';
 import SymbolBucket from '../data/bucket/symbol_bucket';
 import LineBucket from '../data/bucket/line_bucket';
 import FillBucket from '../data/bucket/fill_bucket';
+import FillExtrusionBucket from '../data/bucket/fill_extrusion_bucket';
 import { warnOnce, mapObject, values } from '../util/util';
 import assert from 'assert';
 import ImageAtlas from '../render/image_atlas';
@@ -179,7 +180,7 @@ class WorkerTile {
                     if (bucket instanceof SymbolBucket) {
                         recalculateLayers(bucket.layers, this.zoom);
                         performSymbolLayout(bucket, glyphMap, glyphAtlas.positions, iconMap, imageAtlas.iconPositions, this.showCollisionBoxes);
-                    } else if (bucket instanceof LineBucket || bucket instanceof FillBucket) {
+                    } else if (bucket instanceof LineBucket || bucket instanceof FillBucket || bucket instanceof FillExtrusionBucket) {
                         recalculateLayers(bucket.layers, this.zoom);
                         bucket.addFeatures(options, imageAtlas.patternPositions);
                     }
