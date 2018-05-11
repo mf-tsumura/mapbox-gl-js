@@ -25,6 +25,7 @@ module.exports = {
 
     workerCount: Math.max(Math.floor(browser.hardwareConcurrency / 2), 1),
     setRTLTextPlugin: rtlTextPlugin.setRTLTextPlugin,
+    clearRTLTextPlugin: rtlTextPlugin.clearRTLTextPlugin,
 
     Map,
     NavigationControl,
